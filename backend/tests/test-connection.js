@@ -1,8 +1,8 @@
-import { supabase } from "../src/config/supabase.js";
+import { supabaseClient } from "../src/config/supabase.js";
 
 async function testConnection() {
     try {
-        const { data, error } = await supabase.from("nonexistent_table").select('*');
+        const { data, error } = await supabaseClient.from("nonexistent_table").select('*');
         if (error) {
             console.log("Connection Succesful! Although something went wrong with the query.")
             return;
