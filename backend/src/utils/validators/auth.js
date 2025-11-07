@@ -66,4 +66,6 @@ function validateLoginPayload({ email, password }) {
     };
 }
 
-export { validateRegisterPayload, validateLoginPayload };
+// function validateRefreshPayload({ refreshToken }) {}
+
+export { validateRegisterPayload, validateLoginPayload, validateRefreshPayload };

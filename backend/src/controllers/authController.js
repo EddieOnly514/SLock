@@ -28,9 +28,9 @@ async function registerAccount(req, res) {
         }
 
         return res.status(201).json({ message: 'User registered successfully!' });
-    } catch (error) {
-        console.error('REGISTER ERROR:', error);
-        return res.status(500).json({ error: error.message });
+    } catch (err) {
+        console.error('REGISTER ERROR:', err.message);
+        return res.status(500).json({ error: 'Registration failed due to server side issue.' });
     }
 }
 
@@ -56,16 +56,16 @@ async function loginAccount(req, res) {
 
         if (userError) {
             console.error('Error with retrieving user data:', userError.message);
-            return res.status(400).json({ error: userError.message });
+            return res.status(500).json({ error: userError.message });
         }
 
         return res.status(200).json({ 
                                     accessToken: loginData.session.access_token, 
                                     refreshToken: loginData.session.refresh_token,
                                     user: userData});
-    } catch (error) {
-        console.error('LOGIN ERROR: ', error);
-        return res.status(500).json({ error: error.message });
+    } catch (err) {
+        console.error('LOGIN ERROR: ', err.message);
+        return res.status(500).json({ error: 'Login failed due to server side issue.' });
     }
 
 }
