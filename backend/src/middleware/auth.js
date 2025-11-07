@@ -29,6 +29,4 @@ async function requireAuth(req, res, next) {
     }
 }
 
-// async function refreshSession(req, res) {}
-
 export { requireAuth };

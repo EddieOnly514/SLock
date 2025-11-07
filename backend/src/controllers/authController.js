@@ -1,5 +1,5 @@
 import { supabaseClient, supabaseAdmin } from "../config/supabase.js";
-import { validateRegisterPayload, validateLoginPayload } from "../utils/validators/auth.js";
+import { validateRegisterPayload, validateLoginPayload, validateRefreshPayload } from "../utils/validators/auth.js";
 
 async function registerAccount(req, res) {
     try {
@@ -71,4 +71,41 @@ async function loginAccount(req, res) {
 }
 
 
-export { registerAccount, loginAccount };
+async function refreshSession(req, res) {
+    try {
+        const { data: validateData, error: validateError } = validateRefreshPayload(req.body);
+
+        if (validateError) {
+            return res.status(400).json({ error: validateError.message });
+        }
+
+        const { refreshToken } = validateData;
+
+        const { data: refreshData, error: refreshError} = await supabaseClient.auth.refreshSession({ refresh_token: refreshToken });
+
+        if (refreshError) {
+            console.error('Error with refreshing user session:', refreshError.message);
+            return res.status(500).json({ error: refreshError.message });
+        }
+        
+        const { data: userData, error: userError } = await supabaseClient.from('users').select('*').eq('id', refreshData.user.id).single();
+
+        if (userError) {
+            console.error('Error with retrieving user data after refresh:', userError.message);
+            return res.status(500).json({ error: userError.message });
+        }
+
+        return res.status(200).json({ 
+                                    accessToken: refreshData.session.access_token, 
+                                    refreshToken: refreshData.session.refresh_token,
+                                    user: userData        
+         });
+
+    } catch (err) {
+        console.error('REFRESH ERROR: ', err.message);
+        return res.status(500).json({ error: 'Refresh session failed due to server side issue.' });
+    }
+}
+
+
+export { registerAccount, loginAccount, refreshSession };

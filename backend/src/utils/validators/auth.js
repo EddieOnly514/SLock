@@ -66,6 +66,19 @@ function validateLoginPayload({ email, password }) {
     };
 }
 
-// function validateRefreshPayload({ refreshToken }) {}
+function validateRefreshPayload({ refreshToken }) {
+    const trimmedRefreshToken = refreshToken?.trim() ?? '';
+
+    if (!trimmedRefreshToken) {
+        return { error: { message: 'refreshToken is invalid' }};
+    }
+
+    return {
+        error: null,
+        data: {
+            refreshToken: trimmedRefreshToken
+        }
+    };
+}
 
 export { validateRegisterPayload, validateLoginPayload, validateRefreshPayload };
