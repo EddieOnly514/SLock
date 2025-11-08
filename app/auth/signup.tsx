@@ -7,9 +7,11 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import Colors from '../../constants/Colors';
@@ -17,28 +19,47 @@ import Theme from '../../constants/Theme';
 
 export default function SignupScreen() {
   const router = useRouter();
+  const { signup } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSignup = async () => {
+    // Validation
+    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
+      setError('Please fill in all fields');
+      return;
+    }
+
     if (password !== confirmPassword) {
-      alert("Passwords don't match!");
+      setError("Passwords don't match!");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
       return;
     }
 
     setLoading(true);
-    // TODO: Implement Firebase signup
-    setTimeout(() => {
+    setError('');
+
+    try {
+      await signup(email, password);
+      // Navigation is handled by index screen based on auth state
+      router.replace('/');
+    } catch (err) {
+      setError('Failed to create account. Please try again.');
+      Alert.alert('Signup Error', 'Failed to create account. Please try again.');
+    } finally {
       setLoading(false);
-      router.replace('/onboarding/welcome');
-    }, 1000);
+    }
   };
 
   const handleSocialSignup = async (provider: string) => {
-    // TODO: Implement social signup
-    console.log(`Sign up with ${provider}`);
+    Alert.alert('Coming Soon', `${provider} signup will be available soon!`);
   };
 
   return (
@@ -61,6 +82,12 @@ export default function SignupScreen() {
 
           {/* Form */}
           <View style={styles.form}>
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
             <Input
               label="Email"
               placeholder="Enter your email"
@@ -133,7 +160,7 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   keyboardView: {
     flex: 1,
@@ -160,6 +187,17 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: Theme.spacing.lg,
+  },
+  errorContainer: {
+    backgroundColor: Colors.error[50],
+    borderRadius: Theme.borderRadius.md,
+    padding: Theme.spacing.md,
+    marginBottom: Theme.spacing.md,
+  },
+  errorText: {
+    color: Colors.error[700],
+    fontSize: Theme.fontSize.sm,
+    textAlign: 'center',
   },
   divider: {
     flexDirection: 'row',

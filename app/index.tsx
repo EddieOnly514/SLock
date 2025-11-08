@@ -1,30 +1,43 @@
 import React, { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../hooks/useAuth';
 import Colors from '../constants/Colors';
 
 /**
  * App Entry Point / Splash Screen
  *
- * Checks authentication state and redirects accordingly:
- * - If logged in + onboarded -> (tabs)
- * - If logged in but not onboarded -> onboarding/welcome
- * - If not logged in -> auth/login
+ * TEMPORARY: Bypassing auth/onboarding for testing core features
+ * TODO: Re-enable auth by uncommenting the original logic
  */
 export default function Index() {
   const router = useRouter();
+  // const { user, isLoading, isOnboarded } = useAuth();
 
   useEffect(() => {
-    checkAuthState();
+    // TEMPORARY: Skip auth and go directly to main app
+    setTimeout(() => {
+      router.replace('/(tabs)/lock');
+    }, 500);
+
+    /* ORIGINAL AUTH LOGIC - Uncomment to re-enable:
+    if (!isLoading) {
+      checkAuthState();
+    }
+    */
   }, []);
 
-  const checkAuthState = async () => {
-    // TODO: Check AsyncStorage for auth token and onboarding status
-    // For now, we'll just redirect to login after a brief delay
-    setTimeout(() => {
-      router.replace('/auth/login');
-    }, 1000);
+  /* ORIGINAL checkAuthState function - Uncomment to re-enable:
+  const checkAuthState = () => {
+    if (!user) {
+      router.replace('/onboarding/quiz-intro');
+    } else if (!isOnboarded) {
+      router.replace('/onboarding/quiz-intro');
+    } else {
+      router.replace('/(tabs)/lock');
+    }
   };
+  */
 
   return (
     <View style={styles.container}>
@@ -38,6 +51,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
 });

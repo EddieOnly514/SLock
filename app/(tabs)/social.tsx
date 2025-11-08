@@ -26,7 +26,8 @@ const MOCK_FRIENDS: Friend[] = [
   { id: '3', username: 'alex_j', treeHeight: 68, screenTime: 210, streak: 4 },
 ];
 
-const MY_DATA = {
+const MY_DATA: Friend = {
+  id: 'me',
   username: 'you',
   treeHeight: 78,
   screenTime: 145,
@@ -130,7 +131,7 @@ export default function SocialScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   content: {
     flex: 1,

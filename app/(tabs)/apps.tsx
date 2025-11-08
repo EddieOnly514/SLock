@@ -204,7 +204,7 @@ export default function AppsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   content: {
     paddingBottom: Theme.spacing.xxl,
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral[100],
   },
   blockToggleActive: {
-    backgroundColor: Colors.danger[50],
+    backgroundColor: Colors.error[50],
   },
   blockToggleText: {
     fontSize: Theme.fontSize.xs,
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     color: Colors.text.tertiary,
   },
   blockToggleTextActive: {
-    color: Colors.danger[600],
+    color: Colors.error[600],
   },
   scheduleButton: {
     width: 36,

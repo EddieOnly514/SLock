@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
 import Colors from '../../constants/Colors';
+import Theme from '../../constants/Theme';
 
 export default function TabLayout() {
   return (
@@ -10,63 +11,91 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors.tabActive,
         tabBarInactiveTintColor: Colors.tabInactive,
         tabBarStyle: {
-          backgroundColor: Colors.surface,
-          borderTopColor: Colors.border.light,
+          backgroundColor: Colors.background.secondary,
+          borderTopColor: Colors.border.subtle,
           borderTopWidth: 1,
-          paddingTop: 8,
-          paddingBottom: 8,
-          height: 60,
+          paddingTop: 12,
+          paddingBottom: 12,
+          height: 70,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
+          fontSize: Theme.fontSize.sm,
+          fontWeight: Theme.fontWeight.semibold,
+          marginTop: 4,
         },
       }}
     >
+      {/* New 3-tab structure: Lock, Friends, Rewards */}
       <Tabs.Screen
-        name="social"
+        name="lock"
         options={{
-          title: 'Social',
-          tabBarIcon: ({ color, size }) => (
+          title: 'Lock',
+          tabBarIcon: ({ color }) => (
+            <TabIcon icon="🔒" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="friends"
+        options={{
+          title: 'Friends',
+          tabBarIcon: ({ color }) => (
             <TabIcon icon="👥" color={color} />
           ),
         }}
       />
       <Tabs.Screen
+        name="rewards"
+        options={{
+          title: 'Rewards',
+          tabBarIcon: ({ color }) => (
+            <TabIcon icon="🏆" color={color} />
+          ),
+        }}
+      />
+
+      {/* Legacy tabs - hidden but kept for compatibility */}
+      <Tabs.Screen
+        name="social"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="me"
         options={{
-          title: 'Me',
-          tabBarIcon: ({ color, size }) => (
-            <TabIcon icon="👤" color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
         name="apps"
         options={{
-          title: 'Apps',
-          tabBarIcon: ({ color, size }) => (
-            <TabIcon icon="📱" color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => (
-            <TabIcon icon="⚙️" color={color} />
-          ),
+          href: null,
         }}
       />
     </Tabs>
   );
 }
 
-// Simple icon component using emoji
+// Tab icon with glow effect for active state
 function TabIcon({ icon, color }: { icon: string; color: string }) {
+  const isActive = color === Colors.tabActive;
   return (
-    <Text style={{ fontSize: 24, opacity: color === Colors.tabActive ? 1 : 0.6 }}>
+    <Text
+      style={{
+        fontSize: 28,
+        opacity: isActive ? 1 : 0.5,
+        textShadowColor: isActive ? Colors.glow.primary : 'transparent',
+        textShadowOffset: { width: 0, height: 0 },
+        textShadowRadius: isActive ? 8 : 0,
+      }}
+    >
       {icon}
     </Text>
   );

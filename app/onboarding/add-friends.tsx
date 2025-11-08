@@ -129,7 +129,7 @@ export default function AddFriendsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   content: {
     flexGrow: 1,

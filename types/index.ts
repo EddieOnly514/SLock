@@ -5,8 +5,9 @@
 export interface User {
   id: string;
   username: string;
-  email: string;
-  profilePhoto?: string;
+  email?: string;
+  phone?: string;
+  profilePhotoUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 
@@ -14,6 +15,11 @@ export interface User {
   points: number;
   level: number;
   treeGrowth: number;
+
+  // Streak tracking
+  currentStreak?: number;
+  longestStreak?: number;
+  lastActivityDate?: Date;
 
   // Privacy settings
   isProfilePublic: boolean;

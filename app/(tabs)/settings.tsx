@@ -225,7 +225,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   content: {
     paddingBottom: Theme.spacing.xxl,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   settingTitleDanger: {
-    color: Colors.danger[500],
+    color: Colors.error[500],
   },
   settingSubtitle: {
     fontSize: Theme.fontSize.sm,

@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     ...Theme.shadow.sm,
   },
   secondary: {
-    backgroundColor: Colors.secondary[100],
+    backgroundColor: Colors.neutral[700],
   },
   outline: {
     backgroundColor: 'transparent',
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     color: Colors.neutral.white,
   },
   secondaryText: {
-    color: Colors.secondary[700],
+    color: Colors.text.primary,
   },
   outlineText: {
     color: Colors.primary[500],

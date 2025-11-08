@@ -40,7 +40,7 @@ export default function Input({
       >
         {icon && <View style={styles.iconLeft}>{icon}</View>}
         <TextInput
-          style={[styles.input, icon && styles.inputWithLeftIcon]}
+          style={[styles.input, icon ? styles.inputWithLeftIcon : null]}
           placeholderTextColor={Colors.neutral[400]}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
