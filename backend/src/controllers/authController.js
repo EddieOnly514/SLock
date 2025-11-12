@@ -107,5 +107,34 @@ async function refreshSession(req, res) {
     }
 }
 
+async function logoutAccount(req, res) {
+    try {
+        const { data: validateData, error: validateError } = validateRefreshPayload(req.body)
 
-export { registerAccount, loginAccount, refreshSession };
+        if (validateError) {
+            console.log("Error when validating token: ", validateError);
+            return res.status(400).json({error: validateError});
+        }
+
+        const authHeader = req.headers.authorization || '';
+        const accessToken = authHeader.split(' ')[1];
+
+        await supabaseClient.auth.setSession({ access_token: accessToken, refresh_token: validateData.refreshToken });
+
+        const { error: signOutError } = await supabaseClient.auth.signOut({ scope: 'global' });
+
+        if (signOutError) {
+            console.log("Error when signing out:");
+            return res.status(400).json({error: signOutError});
+        }
+
+        return res.status(200).json({ message: "Succesfully logged out!" });
+
+    } catch (err) {
+        console.error('LOGOUT ERROR: ', err.message);
+        return res.status(500).json({ error: 'Logout failed due to server side issue.' });
+    }
+}
+
+
+export { registerAccount, loginAccount, refreshSession, logoutAccount };

@@ -1,3 +1,4 @@
+//TODO: strengthen email and password validation
 function validateRegisterPayload({ email, username, password }) {
     const trimmedEmail = email?.trim() ?? '';
     const trimmedUsername = username?.trim() ?? '';
@@ -23,8 +24,8 @@ function validateRegisterPayload({ email, username, password }) {
         return { error: { message: 'Username must be less than 16 characters' } };
     }
 
-    if (trimmedPassword.length < 6) {
-        return { error: { message: 'Password must contain at least 6 characters' } };
+    if (trimmedPassword.length < 8) {
+        return { error: { message: 'Password must contain at least 8 characters' } };
     }
 
     return { 
@@ -53,8 +54,8 @@ function validateLoginPayload({ email, password }) {
         return { error: { message: 'Password must not contain spaces' } };
     }
 
-    if (trimmedPassword.length < 6) {
-        return { error: { message: 'Password must contain at least 6 characters' } };
+    if (trimmedPassword.length < 8) {
+        return { error: { message: 'Password must contain at least 8 characters' } };
     }
 
     return { 
@@ -81,4 +82,4 @@ function validateRefreshPayload({ refreshToken }) {
     };
 }
 
-export { validateRegisterPayload, validateLoginPayload, validateRefreshPayload };
+export { validateRegisterPayload, validateLoginPayload, validateRefreshPayload};
