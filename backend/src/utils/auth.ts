@@ -1,35 +1,11 @@
-type ValidationError = { message: string };
-
-interface ValidationResult<T> {
-  data: T | null;
-  error: ValidationError | null;
-}
-
-interface RegisterData {
-  email: string;
-  username: string;
-  password: string;
-}
-
-interface LoginData {
-  email: string;
-  password: string;
-}
-
-interface RefreshData {
-  refreshToken: string;
-}
-
+import type {ValidationResult, RegisterData, LoginData, RefreshData} from "../types/validation";
+ 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function isString(value: unknown): value is string {
-  return typeof value === "string";
-}
-
-function validateRegisterPayload(payload: Record<string, unknown>): ValidationResult<RegisterData> {
-  const rawEmail = isString(payload.email) ? payload.email : "";
-  const rawUsername = isString(payload.username) ? payload.username : "";
-  const rawPassword = isString(payload.password) ? payload.password : "";
+function validateRegisterPayload(payload: Record<string, string>): ValidationResult<RegisterData> {
+  const rawEmail = payload.email;
+  const rawUsername = payload.username;
+  const rawPassword = payload.password;
 
   const trimmedEmail = rawEmail.trim();
   const trimmedUsername = rawUsername.trim();
@@ -60,7 +36,7 @@ function validateRegisterPayload(payload: Record<string, unknown>): ValidationRe
   }
 
   if (trimmedPassword.includes(trimmedUsername) || trimmedPassword.includes(trimmedEmail.split("@")[0])) {
-    return { error: { message: "Password must not contain your username or email local-part" }, data: null };
+    return { error: { message: "Password must not contain your username or email" }, data: null };
   }
 
   return {
@@ -73,9 +49,9 @@ function validateRegisterPayload(payload: Record<string, unknown>): ValidationRe
   };
 }
 
-function validateLoginPayload(payload: Record<string, unknown>): ValidationResult<LoginData> {
-  const rawEmail = isString(payload.email) ? payload.email : "";
-  const rawPassword = isString(payload.password) ? payload.password : "";
+function validateLoginPayload(payload: Record<string, string>): ValidationResult<LoginData> {
+  const rawEmail = payload.email;
+  const rawPassword = payload.password;
 
   const trimmedEmail = rawEmail.trim();
   const trimmedPassword = rawPassword.trim();
@@ -101,8 +77,8 @@ function validateLoginPayload(payload: Record<string, unknown>): ValidationResul
   };
 }
 
-function validateRefreshPayload(payload: Record<string, unknown>): ValidationResult<RefreshData> {
-  const rawRefreshToken = isString(payload.refreshToken) ? payload.refreshToken : "";
+function validateRefreshPayload(payload: Record<string, string>): ValidationResult<RefreshData> {
+  const rawRefreshToken = payload.refreshToken;
   const trimmedRefreshToken = rawRefreshToken.trim();
 
   if (!trimmedRefreshToken) {
@@ -117,5 +93,4 @@ function validateRefreshPayload(payload: Record<string, unknown>): ValidationRes
   };
 }
 
-export type { RegisterData, LoginData, RefreshData, ValidationResult };
 export { validateRegisterPayload, validateLoginPayload, validateRefreshPayload };

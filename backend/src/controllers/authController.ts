@@ -4,27 +4,15 @@ import {
   validateRegisterPayload,
   validateLoginPayload,
   validateRefreshPayload,
-  type RegisterData,
-  type LoginData,
-  type RefreshData,
-} from "../utils/validators/auth";
+} from "../utils/auth";
+import type { RegisterData, LoginData, RefreshData } from "../types/validation";
 import type { UserProfile } from "../types/user";
-
-type RequestWithBody = Request<unknown, unknown, Record<string, unknown>>;
 
 const GENERIC_SERVER_ERROR = "An unexpected server error occurred.";
 
-function handleUnknownError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return String(error);
-}
-
-async function registerAccount(req: RequestWithBody, res: Response): Promise<Response> {
+async function registerAccount(req: Request, res: Response): Promise<Response> {
   try {
-    const validationResult = validateRegisterPayload(req.body ?? {});
+    const validationResult = validateRegisterPayload(req.body);
 
     if (validationResult.error || !validationResult.data) {
       console.error("Register validation error:", validationResult.error?.message);
@@ -65,14 +53,14 @@ async function registerAccount(req: RequestWithBody, res: Response): Promise<Res
 
     return res.status(201).json({ message: "User registered successfully!" });
   } catch (error) {
-    console.error("REGISTER ERROR:", handleUnknownError(error));
+    console.error("REGISTER ERROR:", error);
     return res.status(500).json({ error: GENERIC_SERVER_ERROR });
   }
 }
 
-async function loginAccount(req: RequestWithBody, res: Response): Promise<Response> {
+async function loginAccount(req: Request, res: Response): Promise<Response> {
   try {
-    const validationResult = validateLoginPayload(req.body ?? {});
+    const validationResult = validateLoginPayload(req.body);
 
     if (validationResult.error || !validationResult.data) {
       console.error("Login validation error:", validationResult.error?.message);
@@ -110,12 +98,12 @@ async function loginAccount(req: RequestWithBody, res: Response): Promise<Respon
       user: userData,
     });
   } catch (error) {
-    console.error("LOGIN ERROR:", handleUnknownError(error));
+    console.error("LOGIN ERROR:", error);
     return res.status(500).json({ error: GENERIC_SERVER_ERROR });
   }
 }
 
-async function refreshSession(req: RequestWithBody, res: Response): Promise<Response> {
+async function refreshSession(req: Request, res: Response): Promise<Response> {
   try {
     const validationResult = validateRefreshPayload(req.body ?? {});
 
@@ -154,16 +142,16 @@ async function refreshSession(req: RequestWithBody, res: Response): Promise<Resp
       user: userData,
     });
   } catch (error) {
-    console.error("REFRESH ERROR:", handleUnknownError(error));
+    console.error("REFRESH ERROR:", error);
     return res.status(500).json({ error: GENERIC_SERVER_ERROR });
   }
 }
 
-type AuthenticatedRequest = RequestWithBody & { user?: UserProfile };
+type AuthenticatedRequest = Request & { user?: UserProfile };
 
 async function logoutAccount(req: AuthenticatedRequest, res: Response): Promise<Response> {
   try {
-    const validationResult = validateRefreshPayload(req.body ?? {});
+    const validationResult = validateRefreshPayload(req.body);
 
     if (validationResult.error || !validationResult.data) {
       return res.status(400).json({ error: validationResult.error?.message ?? "Invalid payload" });
@@ -201,7 +189,7 @@ async function logoutAccount(req: AuthenticatedRequest, res: Response): Promise<
 
     return res.status(200).json({ message: "Successfully logged out!" });
   } catch (error) {
-    console.error("LOGOUT ERROR:", handleUnknownError(error));
+    console.error("LOGOUT ERROR:", error);
     return res.status(500).json({ error: GENERIC_SERVER_ERROR });
   }
 }

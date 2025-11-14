@@ -6,6 +6,5 @@ export interface UserProfile {
   privacy_preset: string;
   created_at: string;
   phone?: string | null;
-  [key: string]: unknown;
 }
 
