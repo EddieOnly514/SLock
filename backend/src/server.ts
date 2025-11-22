@@ -1,17 +1,14 @@
-import express, { type Request, type Response } from "express";
+import express from "express";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth";
+import { join } from "path";
 
-dotenv.config();
+dotenv.config({ path: join(__dirname, "../../.env") });
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
-
-app.get("/api/health", (_req: Request, res: Response) => {
-  res.json({ status: "okay", message: "server is running" });
-});
 
 app.use("/api/auth", authRoutes);
 
