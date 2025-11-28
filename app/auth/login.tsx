@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../frontend/src/hooks/useAuth';
 import CountryCodePicker, { CountryCode } from '../../components/CountryCodePicker';
 import Colors from '../../constants/Colors';
 import Theme from '../../constants/Theme';

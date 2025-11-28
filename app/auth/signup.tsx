@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../frontend/src/hooks/useAuth';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import Colors from '../../constants/Colors';
@@ -21,25 +21,56 @@ export default function SignupScreen() {
   const router = useRouter();
   const { signup } = useAuth();
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSignup = async () => {
-    // Validation
-    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
+    
+    if (!email.trim() || !username.trim() || !password.trim() || !confirmPassword.trim()) {
       setError('Please fill in all fields');
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords don't match!");
+      setError('Passwords don\'t match!');
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Email format is invalid');
+      return;
+    }
+  
+    if (/\s/.test(username)) {
+      setError('Username must not contain spaces');
+      return;
+    }
+  
+    if (/\s/.test(password)) {
+      setError('Password must not contain spaces');
+      return;
+    }
+  
+    if (username.length > 16) {
+      setError('Username must be less than 16 characters');
+      return;
+    }
+  
+    if (password.length < 8) {
+      setError('Password must contain at least 8 characters');
+      return;
+    }
+  
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      setError('Password must include uppercase, lowercase, and numeric characters');
+      return;
+    }
+  
+    if (password.includes(username) || password.includes(email.split("@")[0])) {
+      setError('Password must not contain your username or email');
       return;
     }
 
@@ -47,10 +78,10 @@ export default function SignupScreen() {
     setError('');
 
     try {
-      await signup(email, password);
-      // Navigation is handled by index screen based on auth state
-      router.replace('/');
+      await signup(email, password, username);
+      router.replace('/(tabs)/lock');
     } catch (err) {
+      console.log(err);
       setError('Failed to create account. Please try again.');
       Alert.alert('Signup Error', 'Failed to create account. Please try again.');
     } finally {
@@ -95,6 +126,13 @@ export default function SignupScreen() {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+            />
+
+            <Input
+              label="Username"
+              placeholder="Enter your username"
+              value={username}
+              onChangeText={setUsername}
             />
 
             <Input

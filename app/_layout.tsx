@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { AuthProvider } from '../hooks/useAuth';
+import { AuthProvider } from '../frontend/src/hooks/useAuth';
 import { AppDataProvider } from '../hooks/useAppData';
 import { OnboardingProvider } from '../hooks/useOnboarding';
 

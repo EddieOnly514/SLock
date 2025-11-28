@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: Theme.fontSize.md,
-    color: Colors.text.primary,
+    color: Colors.text.inverse,
     paddingVertical: Theme.spacing.md,
   },
   inputWithLeftIcon: {
