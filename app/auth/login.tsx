@@ -93,15 +93,15 @@ export default function LoginScreen() {
     return true;
   };
 
-  const validateEmail = (emailStr: string): boolean => {
+  const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!emailStr) {
+    if (!email.trim()) {
       setEmailError('Email is required');
       return false;
     }
 
-    if (!emailRegex.test(emailStr)) {
+    if (!emailRegex.test(email)) {
       setEmailError('Please enter a valid email');
       return false;
     }
@@ -116,8 +116,8 @@ export default function LoginScreen() {
       return false;
     }
 
-    if (pass.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
+    if (pass.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
       return false;
     }
 
@@ -196,6 +196,8 @@ export default function LoginScreen() {
   };
 
   const handleEmailLogin = async () => {
+    //TODO: fix the syntax for login, can defnitely seperate it so it's easier to read
+    //also seems like there is some unnecessary code here
     clearErrors();
 
     const isEmailValid = validateEmail(email);
@@ -220,7 +222,7 @@ export default function LoginScreen() {
       trackAuthSuccess('email', authStartTime);
 
       // Navigate after short delay to show success state
-      setTimeout(() => router.replace('/'), 500);
+      setTimeout(() => router.replace('/(tabs)/lock'), 500);
     } catch (err: any) {
       setLoginState('error');
       setError(err.message || 'Failed to login');
@@ -702,7 +704,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: Theme.spacing.sm,
     fontSize: Theme.fontSize.md,
-    color: Colors.text.primary,
+    color: Colors.text.inverse,
     fontWeight: Theme.fontWeight.medium,
   },
   fieldError: {

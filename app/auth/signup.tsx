@@ -74,6 +74,8 @@ export default function SignupScreen() {
       return;
     }
 
+    //TODO: maybe seperate the validation from the main functionality
+
     setLoading(true);
     setError('');
 
@@ -185,7 +187,7 @@ export default function SignupScreen() {
           {/* Login Link */}
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.back()}>
+            <TouchableOpacity onPress={() => router.replace('/auth/login')}>
               <Text style={styles.loginLink}>Log In</Text>
             </TouchableOpacity>
           </View>

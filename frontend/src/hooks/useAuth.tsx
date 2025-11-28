@@ -38,7 +38,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    return;
+    try {
+      const { accessToken, refreshToken, user } = await loginUser(email, password);
+
+      await saveAccessToken(accessToken);
+      await saveRefreshToken(refreshToken);
+
+      setUser(user);
+    } catch (err) {
+      console.error('Login User error:', err);
+      const message = err instanceof Error ? err.message : 'Failed to log in, please try again';
+      throw new Error(message);
+    }
   };
 
   const signup = async (email: string, password: string, username: string) => {
@@ -51,10 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await saveRefreshToken(refreshToken);
 
       setUser(user);
-
     } catch (err) {
       console.error('Register User error:', err);
-      const message = err instanceof Error ? err.message : 'Failed to sign in due to unknown error, please try again';
+      const message = err instanceof Error ? err.message : 'Failed to sign in, please try again';
       throw new Error(message);
     }
   };
