@@ -23,6 +23,10 @@ function validateRegisterPayload(payload: Record<string, string>): ValidationRes
     return { error: { message: "Username must not contain spaces" }, data: null };
   }
 
+  if (/\s/.test(trimmedPassword)) {
+    return { error: { message: "Password must not contain spaces" }, data: null }
+  }
+
   if (trimmedUsername.length > 16) {
     return { error: { message: "Username must be less than 16 characters" }, data: null };
   }
