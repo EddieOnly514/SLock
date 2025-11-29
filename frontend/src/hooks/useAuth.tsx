@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types/index';
 import type { Session } from '@supabase/supabase-js';
-import { registerUser, loginUser, refreshSession } from '../services/backendApi';
+import { registerUser, loginUser, refreshSession, logoutUser } from '../services/backendApi';
 import { 
   saveAccessToken, 
   saveRefreshToken, 
@@ -104,7 +104,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    return;
+    try {
+      const accessToken = await getAccessToken();
+      const refreshToken = await getRefreshToken();
+
+      if (!accessToken || !refreshToken) {
+        return;
+      }
+
+      await logoutUser(accessToken, refreshToken);
+
+    } catch (err) {
+      console.error('Logout User error:', err);
+    } finally {
+      await clearTokens();
+      setUser(null);
+    }
   };
 
   const completeOnboarding = async () => {

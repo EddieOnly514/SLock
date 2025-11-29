@@ -53,6 +53,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color }) => (
+            <TabIcon icon="⚙️" color={color}/>
+          ),
+        }}
+      />
 
       {/* Legacy tabs - hidden but kept for compatibility */}
       <Tabs.Screen
@@ -73,12 +82,7 @@ export default function TabLayout() {
           href: null,
         }}
       />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          href: null,
-        }}
-      />
+      
     </Tabs>
   );
 }

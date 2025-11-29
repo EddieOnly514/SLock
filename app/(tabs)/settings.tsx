@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Colors from '../../constants/Colors';
 import Theme from '../../constants/Theme';
+import { useAuth } from '../../frontend/src/hooks/useAuth';
 
 interface SettingItem {
   id: string;
@@ -24,8 +25,9 @@ interface SettingItem {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { logout } = useAuth();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert(
       'Log Out',
       'Are you sure you want to log out?',
@@ -34,8 +36,8 @@ export default function SettingsScreen() {
         {
           text: 'Log Out',
           style: 'destructive',
-          onPress: () => {
-            // TODO: Clear auth and redirect
+          onPress: async () => {
+            await logout();
             router.replace('/auth/login');
           },
         },

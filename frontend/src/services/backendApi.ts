@@ -1,9 +1,11 @@
 import { User } from "../../../types";
 
+// logoutResponse has the same interface as RegisterResponse
 interface RegisterResponse {
     message: string,
 };
 
+// LoginResponse has the same interface as refreshResponse
 interface LoginResponse {
     accessToken: string,
     refreshToken: string,
@@ -15,10 +17,10 @@ async function apiRequest<T>(path: string, options?: RequestInit): Promise<T> {
     const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
     const response = await fetch(API_URL + path, {
+            ...options,
             headers: {
             'content-type' : 'application/json',
-            ...options?.headers},
-            ...options
+            ...options?.headers}
         }
     );
 
@@ -50,4 +52,12 @@ async function refreshSession(refreshToken: string): Promise<LoginResponse> {
     });
 }
 
-export { registerUser, loginUser, refreshSession };
+async function logoutUser(accessToken: string, refreshToken: string): Promise<RegisterResponse> {
+    return apiRequest<RegisterResponse>('/api/auth/logout', {
+        headers: { Authorization: `Bearer ${accessToken}`},
+        method: 'POST',
+        body: JSON.stringify({ refreshToken })
+    })
+}
+
+export { registerUser, loginUser, refreshSession, logoutUser };
