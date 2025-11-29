@@ -23,6 +23,10 @@ function validateRegisterPayload(payload: Record<string, string>): ValidationRes
     return { error: { message: "Username must not contain spaces" }, data: null };
   }
 
+  if (/\s/.test(trimmedPassword)) {
+    return { error: { message: "Password must not contain spaces" }, data: null }
+  }
+
   if (trimmedUsername.length > 16) {
     return { error: { message: "Username must be less than 16 characters" }, data: null };
   }
@@ -78,7 +82,12 @@ function validateLoginPayload(payload: Record<string, string>): ValidationResult
 }
 
 function validateRefreshPayload(payload: Record<string, string>): ValidationResult<RefreshData> {
-  const rawRefreshToken = payload.refreshToken;
+  const rawRefreshToken = payload?.refreshToken;
+
+  if (!rawRefreshToken) {
+    return { error: { message: "refreshToken is required"}, data: null};
+  }
+
   const trimmedRefreshToken = rawRefreshToken.trim();
 
   if (!trimmedRefreshToken) {

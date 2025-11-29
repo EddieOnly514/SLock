@@ -151,7 +151,7 @@ type AuthenticatedRequest = Request & { user?: UserProfile };
 
 async function logoutAccount(req: AuthenticatedRequest, res: Response): Promise<Response> {
   try {
-    const validationResult = validateRefreshPayload(req.body);
+    const validationResult = validateRefreshPayload(req.body ?? {});
 
     if (validationResult.error || !validationResult.data) {
       return res.status(400).json({ error: validationResult.error?.message ?? "Invalid payload" });
