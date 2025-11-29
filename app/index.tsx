@@ -28,10 +28,9 @@ export default function Index() {
 
   const checkAuthState = () => {
     if (!user) {
-      router.replace('/onboarding/quiz-intro');
-    } else if (!isOnboarded) {
-      router.replace('/onboarding/quiz-intro')
+      router.replace('/auth/signup');
     } else {
+      // skip onboarding for now
       router.replace('/(tabs)/lock');
     }};
 

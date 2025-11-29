@@ -31,16 +31,23 @@ async function apiRequest<T>(path: string, options?: RequestInit): Promise<T> {
 } 
 
 async function registerUser(email: string, username: string, password: string): Promise<RegisterResponse> {
-    return apiRequest<RegisterResponse>("/api/auth/register", {
+    return apiRequest<RegisterResponse>('/api/auth/register', {
         method: 'POST', 
-        body: JSON.stringify({ email, username, password })},
-)}
-
-async function loginUser(email: string, password: string): Promise<LoginResponse> {
-    return apiRequest<LoginResponse>("/api/auth/login", {
-        method: 'POST',
-        body: JSON.stringify({ email, password })
-    })
+        body: JSON.stringify({ email, username, password })})
 }
 
-export { registerUser, loginUser };
+async function loginUser(email: string, password: string): Promise<LoginResponse> {
+    return apiRequest<LoginResponse>('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+    });
+}
+
+async function refreshSession(refreshToken: string): Promise<LoginResponse> {
+    return apiRequest<LoginResponse>('/api/auth/refresh', {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken })
+    });
+}
+
+export { registerUser, loginUser, refreshSession };

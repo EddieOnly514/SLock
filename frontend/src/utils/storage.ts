@@ -38,5 +38,19 @@ async function getRefreshToken(): Promise<string | null> {
     
 }
 
+async function clearTokens(): Promise<void> {
+    try {
+        await AsyncStorage.multiRemove(['@refresh_token', '@access_token'])
+    } catch (err) {
+        console.log("Error deleting tokens from storage: ", err);
+    }
+}
 
-export { saveAccessToken, getAccessToken, saveRefreshToken, getRefreshToken };
+
+export { 
+    saveAccessToken, 
+    getAccessToken, 
+    saveRefreshToken, 
+    getRefreshToken,
+    clearTokens
+};

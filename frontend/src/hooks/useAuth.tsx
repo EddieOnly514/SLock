@@ -1,10 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../../../services/supabase';
 import { User } from '../types/index';
 import type { Session } from '@supabase/supabase-js';
-import { registerUser, loginUser } from '../services/backendApi';
-import { saveAccessToken, saveRefreshToken } from '../utils/storage';
+import { registerUser, loginUser, refreshSession } from '../services/backendApi';
+import { 
+  saveAccessToken, 
+  saveRefreshToken, 
+  getAccessToken, 
+  getRefreshToken,
+  clearTokens } from '../utils/storage';
 
 interface AuthContextType {
   user: User | null;
@@ -29,8 +32,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isOnboarded, setIsOnboarded] = useState(false);
 
   useEffect(() => {
-    setIsLoading(false); // For now, just set it false to check the loading screen
-    return;
+    const checkSession = async () => {
+      try {
+        const oldAccessToken = await getAccessToken();
+        const oldRefreshToken = await getRefreshToken();
+
+        if (!oldAccessToken || !oldRefreshToken) {
+          await clearTokens();
+          setIsLoading(false);
+          return;
+        }
+
+        const { refreshToken, accessToken, user } = await refreshSession(oldRefreshToken);
+
+        await saveAccessToken(accessToken);
+        await saveRefreshToken(refreshToken);
+        setUser(user);
+
+      } catch (err) {
+        await clearTokens();
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkSession();  
   }, []);
 
   const loadUserProfile = async (userId: string) => {
