@@ -82,7 +82,12 @@ function validateLoginPayload(payload: Record<string, string>): ValidationResult
 }
 
 function validateRefreshPayload(payload: Record<string, string>): ValidationResult<RefreshData> {
-  const rawRefreshToken = payload.refreshToken;
+  const rawRefreshToken = payload?.refreshToken;
+
+  if (!rawRefreshToken) {
+    return { error: { message: "refreshToken is required"}, data: null};
+  }
+
   const trimmedRefreshToken = rawRefreshToken.trim();
 
   if (!trimmedRefreshToken) {
