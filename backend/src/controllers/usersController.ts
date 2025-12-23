@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import type { UserProfile } from "../types/user";
 import { validateUpdatePayload } from "../utils/validate";
-import { supabaseClient, supabaseAdmin } from "../config/supabase";
+import { supabaseAdmin } from "../config/supabase";
 
 type AuthenticatedRequest = Request & { user?: UserProfile };
 const GENERIC_SERVER_ERROR = 'An unexpected server error occurred.';

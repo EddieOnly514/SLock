@@ -134,13 +134,9 @@ function validateUpdatePayload(payload: Record<string, string>): ValidationResul
     updateData.username = trimmedUsername;
   }
 
-  if (trimmedAvatar_url !== undefined) {
+  if (rawAvatar_url !== undefined) {
     //add further validation for url, but for now its good
     updateData.avatar_url = trimmedAvatar_url || null;
-  }
-
-  if (!trimmedUsername && !rawAvatar_url) {
-    return { error: { message: "At least one filed must be provided for an update" }, data: null};
   }
 
   return { error: null, data: updateData };
