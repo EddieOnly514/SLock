@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Colors from '../../constants/Colors';
 import Theme from '../../constants/Theme';
+import { useAuth } from '../../frontend/src/hooks/useAuth';
 
 interface AppUsage {
   id: string;
@@ -34,6 +35,8 @@ export default function MeScreen() {
     0
   );
 
+  const { user } = useAuth();
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -50,7 +53,7 @@ export default function MeScreen() {
               <Text style={styles.editPhotoText}>✏️</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.username}>@username</Text>
+          <Text style={styles.username}>@{user?.username ?? 'Loading...'}</Text>
           <TouchableOpacity>
             <Text style={styles.editProfileText}>Edit Profile</Text>
           </TouchableOpacity>
@@ -210,7 +213,7 @@ const styles = StyleSheet.create({
   username: {
     fontSize: Theme.fontSize.xl,
     fontWeight: Theme.fontWeight.bold,
-    color: Colors.text.primary,
+    color: Colors.text.inverse,
     marginBottom: Theme.spacing.xs,
   },
   editProfileText: {
