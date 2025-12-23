@@ -1,6 +1,8 @@
-import type {ValidationResult, RegisterData, LoginData, RefreshData} from "../types/validation";
- 
+import type {ValidationResult, RegisterData, LoginData, RefreshData, UpdateData} from "../types/validation";
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+//TODO: can seperate concerns between email, username, and password to improve readability and reusablility.
 
 function validateRegisterPayload(payload: Record<string, string>): ValidationResult<RegisterData> {
   const rawEmail = payload.email;
@@ -29,6 +31,10 @@ function validateRegisterPayload(payload: Record<string, string>): ValidationRes
 
   if (trimmedUsername.length > 16) {
     return { error: { message: "Username must be less than 16 characters" }, data: null };
+  }
+
+  if (trimmedUsername.length < 3) {
+    return { error: { message: "Username must contain at least 3 characters" }, data: null };
   }
 
   if (trimmedPassword.length < 8) {
@@ -85,7 +91,7 @@ function validateRefreshPayload(payload: Record<string, string>): ValidationResu
   const rawRefreshToken = payload?.refreshToken;
 
   if (!rawRefreshToken) {
-    return { error: { message: "refreshToken is required"}, data: null};
+    return { error: { message: "refreshToken is required"}, data: null };
   }
 
   const trimmedRefreshToken = rawRefreshToken.trim();
@@ -102,4 +108,45 @@ function validateRefreshPayload(payload: Record<string, string>): ValidationResu
   };
 }
 
-export { validateRegisterPayload, validateLoginPayload, validateRefreshPayload };
+// In the future, maybe add more things to update like a bio, password, email, etc.
+function validateUpdatePayload(payload: Record<string, string>): ValidationResult<UpdateData> {
+  const rawUsername = payload?.username;
+  const rawAvatar_url = payload?.avatar_url;
+
+  const trimmedUsername = rawUsername?.trim();
+  const trimmedAvatar_url = rawAvatar_url?.trim();
+
+  const updateData: UpdateData = {};
+
+  if (trimmedUsername) {
+    if (/\s/.test(trimmedUsername)) {
+      return { error: { message: "Username must not contain spaces" }, data: null };
+    }
+  
+    if (trimmedUsername.length > 16) {
+      return { error: { message: "Username must be less than 16 characters" }, data: null };
+    }
+
+    if (trimmedUsername.length < 3) {
+      return { error: { message: "Username must contain at least 3 characters" }, data: null };
+    }
+
+    updateData.username = trimmedUsername;
+  }
+
+  if (trimmedAvatar_url !== undefined) {
+    //add further validation for url, but for now its good
+    updateData.avatar_url = trimmedAvatar_url || null;
+  }
+
+  if (!trimmedUsername && !rawAvatar_url) {
+    return { error: { message: "At least one filed must be provided for an update" }, data: null};
+  }
+
+  return { error: null, data: updateData };
+}
+
+export { validateRegisterPayload, 
+  validateLoginPayload, 
+  validateRefreshPayload, 
+  validateUpdatePayload };

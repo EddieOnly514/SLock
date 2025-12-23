@@ -4,11 +4,11 @@ import {
   validateRegisterPayload,
   validateLoginPayload,
   validateRefreshPayload,
-} from "../utils/auth";
+} from "../utils/validate";
 import type { RegisterData, LoginData, RefreshData } from "../types/validation";
 import type { UserProfile } from "../types/user";
 
-const GENERIC_SERVER_ERROR = "An unexpected server error occurred.";
+const GENERIC_SERVER_ERROR = 'An unexpected server error occurred.';
 
 async function registerAccount(req: Request, res: Response): Promise<Response> {
   try {
