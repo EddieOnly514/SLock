@@ -51,7 +51,7 @@ export default function SettingsScreen() {
       title: 'Edit Profile',
       subtitle: 'Update your username and photo',
       icon: '👤',
-      onPress: () => console.log('Edit profile'),
+      onPress: () => router.push('/edit-profile'),
       showArrow: true,
     },
     {

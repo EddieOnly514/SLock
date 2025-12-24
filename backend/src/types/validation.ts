@@ -20,4 +20,10 @@ interface RefreshData {
   refreshToken: string;
 }
 
-export type { ValidationResult, RegisterData, LoginData, RefreshData };
+interface UpdateData {
+  //Can update later to provide functionality for more info (like updating password or email)
+  username?: string;
+  avatar_url?: string | null;
+}
+
+export type { ValidationResult, RegisterData, LoginData, RefreshData, UpdateData };

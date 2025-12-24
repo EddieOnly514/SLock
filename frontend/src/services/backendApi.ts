@@ -12,6 +12,10 @@ interface LoginResponse {
     user: User,
 };
 
+interface userResponse {
+    user: User
+}
+
 async function apiRequest<T>(path: string, options?: RequestInit): Promise<T> {
     
     const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
@@ -60,4 +64,30 @@ async function logoutUser(accessToken: string, refreshToken: string): Promise<Re
     })
 }
 
-export { registerUser, loginUser, refreshSession, logoutUser };
+async function getUserProfile(accessToken: string): Promise<userResponse> {
+    return apiRequest<userResponse>('/api/users/me', {
+        headers: { Authorization: `Bearer ${accessToken}`},
+        method: 'GET',
+    })
+}
+
+async function updateUserProfile(accessToken: string, username?: string, avatar_url?: string | null): Promise<userResponse> {
+    //function is a little ugly, check if there's a way to make the code more flexible and legible
+    const updateFields: Record<string, string | null > = {};
+    
+    if (username !== undefined) {
+        updateFields.username = username;
+    }
+
+    if (avatar_url !== undefined) {
+        updateFields.avatar_url = avatar_url;
+    }
+    
+    return apiRequest<userResponse>('/api/users/me', {
+        headers: { Authorization: `Bearer ${accessToken}`},
+        method: 'PATCH',
+        body: JSON.stringify(updateFields)
+    })
+}
+
+export { registerUser, loginUser, refreshSession, logoutUser, getUserProfile, updateUserProfile };

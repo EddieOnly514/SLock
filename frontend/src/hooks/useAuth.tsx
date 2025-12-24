@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types/index';
 import type { Session } from '@supabase/supabase-js';
-import { registerUser, loginUser, refreshSession, logoutUser } from '../services/backendApi';
+import { 
+  registerUser, 
+  loginUser, 
+  refreshSession, 
+  logoutUser,
+  updateUserProfile,
+  getUserProfile } from '../services/backendApi';
 import { 
   saveAccessToken, 
   saveRefreshToken, 
@@ -71,9 +77,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await saveRefreshToken(refreshToken);
 
       setUser(user);
-    } catch (err) {
-      console.error('Login User error:', err);
-      const message = err instanceof Error ? err.message : 'Failed to log in, please try again';
+    } catch (error) {
+      console.error('Login User error:', error);
+      const message = error instanceof Error ? error.message : 'Failed to log in, please try again';
       throw new Error(message);
     }
   };
@@ -88,9 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await saveRefreshToken(refreshToken);
 
       setUser(user);
-    } catch (err) {
-      console.error('Register User error:', err);
-      const message = err instanceof Error ? err.message : 'Failed to sign in, please try again';
+    } catch (error) {
+      console.error('Register User error:', error);
+      const message = error instanceof Error ? error.message : 'Failed to sign in, please try again';
       throw new Error(message);
     }
   };
@@ -114,8 +120,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await logoutUser(accessToken, refreshToken);
 
-    } catch (err) {
-      console.error('Logout User error:', err);
+    } catch (error) {
+      console.error('Logout User error:', error);
     } finally {
       await clearTokens();
       setUser(null);
@@ -127,7 +133,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateUser = async (userData: Partial<User>) => {
-    return;
+    try {
+      const accessToken = await getAccessToken();
+
+      if (!accessToken) {
+        throw Error('Not Authenticated')
+      }
+
+      const { user: updatedUser } = await updateUserProfile(accessToken, userData?.username, userData?.avatar_url);
+  
+      setUser(updatedUser);
+    } catch (error) {
+      console.error('Update User error:', error);
+      const message = error instanceof Error ? error.message : 'Failed to update profile, please try again';
+      throw new Error(message);
+    }
   };
 
   return (
