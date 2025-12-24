@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Colors from '../../constants/Colors';
 import Theme from '../../constants/Theme';
+import { useRouter } from 'expo-router'
 import { useAuth } from '../../frontend/src/hooks/useAuth';
 
 interface AppUsage {
@@ -35,6 +36,7 @@ export default function MeScreen() {
     0
   );
 
+  const router = useRouter();
   const { user } = useAuth();
 
   return (
@@ -54,7 +56,7 @@ export default function MeScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.username}>@{user?.username ?? 'Loading...'}</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/edit-profile')}>
             <Text style={styles.editProfileText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
