@@ -60,7 +60,7 @@ async function updateUser(req: AuthenticatedRequest, res: Response): Promise<Res
             updateFields.avatar_url = newAvatar_url;
         }
 
-        if (Object.keys(updateFields).length === 0 ) {
+        if (Object.keys(updateFields).length === 0) {
             return res.status(400).json({ error: 'At least one field must be provided for update' });
         }
 

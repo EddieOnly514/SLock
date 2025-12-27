@@ -26,4 +26,10 @@ interface UpdateData {
   avatar_url?: string | null;
 }
 
-export type { ValidationResult, RegisterData, LoginData, RefreshData, UpdateData };
+interface AddAppData {
+  app_id: string;
+  is_blocked?: boolean;
+  is_tracked?: boolean;
+}
+
+export type { ValidationResult, RegisterData, LoginData, RefreshData, UpdateData, AddAppData };

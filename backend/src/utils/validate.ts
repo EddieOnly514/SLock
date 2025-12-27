@@ -1,4 +1,10 @@
-import type {ValidationResult, RegisterData, LoginData, RefreshData, UpdateData} from "../types/validation";
+import type {
+  ValidationResult, 
+  RegisterData, 
+  LoginData, 
+  RefreshData, 
+  UpdateData,
+  AddAppData} from "../types/validation";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -142,7 +148,54 @@ function validateUpdatePayload(payload: Record<string, string>): ValidationResul
   return { error: null, data: updateData };
 }
 
+function validateAddAppPayload(payload: Record<string, string>): ValidationResult<AddAppData> {
+  const rawApp_id = payload.app_id;
+  const is_blocked = payload?.is_blocked;
+  const is_tracked = payload?.is_tracked;
+
+  if (!rawApp_id) {
+    return { error: { message: "App id must be provided" }, data: null };
+  }
+
+  const AddAppPayload: AddAppData = {app_id: rawApp_id.trim()};
+
+  if (is_blocked !== undefined) {
+    if (typeof is_blocked === 'boolean') {
+      AddAppPayload.is_blocked = is_blocked;
+    } else if (typeof is_blocked === 'string') {
+      if (is_blocked === 'false') {
+        AddAppPayload.is_blocked = false;
+      } else if (is_blocked === 'true') {
+        AddAppPayload.is_blocked = true;
+      } else {
+        return { error: { message: 'Invalid value for is_blocked '}, data: null};
+      }
+    } else {
+      return { error: { message: 'Invalid type for is_blocked '}, data: null };
+    }
+  }
+
+  if (is_tracked !== undefined) {
+    if (typeof is_tracked === 'boolean') {
+      AddAppPayload.is_tracked = is_tracked;
+    } else if (typeof is_tracked === 'string') {
+      if (is_tracked === 'false') {
+        AddAppPayload.is_tracked = false;
+      } else if (is_tracked === 'true') {
+        AddAppPayload.is_tracked = true;
+      } else {
+        return { error: { message: 'Invalid value for is_tracked '}, data: null};
+      }
+    } else {
+      return { error: { message: 'Invalid type for is_tracked '}, data: null };
+    }
+  }
+
+  return { error: null, data: AddAppPayload };
+}
+
 export { validateRegisterPayload, 
   validateLoginPayload, 
   validateRefreshPayload, 
-  validateUpdatePayload };
+  validateUpdatePayload,
+  validateAddAppPayload };
