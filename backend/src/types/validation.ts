@@ -32,4 +32,16 @@ interface AddAppData {
   is_tracked?: boolean;
 }
 
-export type { ValidationResult, RegisterData, LoginData, RefreshData, UpdateData, AddAppData };
+interface UpdateAppData {
+  is_blocked?: boolean;
+  is_tracked?: boolean;
+}
+
+export type { 
+  ValidationResult, 
+  RegisterData, 
+  LoginData, 
+  RefreshData, 
+  UpdateData, 
+  AddAppData,
+  UpdateAppData };

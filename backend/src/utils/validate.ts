@@ -4,7 +4,8 @@ import type {
   LoginData, 
   RefreshData, 
   UpdateData,
-  AddAppData} from "../types/validation";
+  AddAppData,
+  UpdateAppData} from "../types/validation";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -194,8 +195,54 @@ function validateAddAppPayload(payload: Record<string, string>): ValidationResul
   return { error: null, data: AddAppPayload };
 }
 
+// look at repetition in code between validateAddAppPayload
+// and validateUpdateAppPayload you can change this into a unified function
+// but we'll come back to that laters
+
+function validateUpdateAppPayload(payload: Record<string, string>): ValidationResult<UpdateAppData> {
+  const is_blocked = payload?.is_blocked;
+  const is_tracked = payload?.is_tracked;
+
+  const UpdateAppPayload: UpdateAppData = {};
+
+  if (is_blocked !== undefined) {
+    if (typeof is_blocked === 'boolean') {
+      UpdateAppPayload.is_blocked = is_blocked;
+    } else if (typeof is_blocked === 'string') {
+      if (is_blocked === 'false') {
+        UpdateAppPayload.is_blocked = false;
+      } else if (is_blocked === 'true') {
+        UpdateAppPayload.is_blocked = true;
+      } else {
+        return { error: { message: 'Invalid value for is_blocked' }, data: null};
+      }
+    } else {
+      return { error: { message: 'Invalid type for is_blocked' }, data: null };
+    }
+  }
+
+  if (is_tracked !== undefined) {
+    if (typeof is_tracked === 'boolean') {
+      UpdateAppPayload.is_tracked = is_tracked;
+    } else if (typeof is_tracked === 'string') {
+      if (is_tracked === 'false') {
+        UpdateAppPayload.is_tracked = false;
+      } else if (is_tracked === 'true') {
+        UpdateAppPayload.is_tracked = true;
+      } else {
+        return { error: { message: 'Invalid value for is_tracked' }, data: null};
+      }
+    } else {
+      return { error: { message: 'Invalid type for is_tracked' }, data: null };
+    }
+  }
+
+  return { error: null, data: UpdateAppPayload };
+}
+
 export { validateRegisterPayload, 
   validateLoginPayload, 
   validateRefreshPayload, 
   validateUpdatePayload,
-  validateAddAppPayload };
+  validateAddAppPayload,
+  validateUpdateAppPayload };
