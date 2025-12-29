@@ -21,8 +21,7 @@ async function getUserApps(req: AuthenticatedRequest, res: Response): Promise<Re
                                                                         .eq('user_id', userData.id)
 
         if (appsError) {
-            console.error('Error when fetching data from server: ', appsError);
-            return res.status(500).json({ error: 'Error fetching tracked apps' });
+            throw appsError;
         }
 
         if (!appsData) {
@@ -55,8 +54,7 @@ async function addUserApp(req: AuthenticatedRequest, res: Response): Promise<Res
         const { error: trackedAppError, data: trackedAppData } = await supabaseAdmin.from('tracked_apps').select('*').eq('id', validationData.app_id);
 
         if (trackedAppError) {
-            console.error('Error when fetching data from server: ', trackedAppError);
-            return res.status(500).json({ error: 'Error when fetching for tracked app' })
+            throw trackedAppError;
         }
 
         if (!trackedAppData || trackedAppData.length === 0) {
@@ -68,8 +66,7 @@ async function addUserApp(req: AuthenticatedRequest, res: Response): Promise<Res
                                                         .eq('user_id', userData.id).eq('app_id', validationData.app_id);
 
         if (userAppError) {
-            console.error('Error when fetching data from server: ', userAppError);
-            return res.status(500).json({ error: 'Error when fetching server for user app' })
+            throw userAppError;
         }
 
         if (userAppData && userAppData.length > 0) {
@@ -94,8 +91,7 @@ async function addUserApp(req: AuthenticatedRequest, res: Response): Promise<Res
                                                             .insert(finalAppData).select().single();
         
         if (addedAppError || !app) {
-            console.error('Error when adding app to server: ', addedAppError);
-            return res.status(500).json({ error: 'Error when adding app' })
+            throw addedAppError || Error('Error when adding app to database');
         }
 
         const { error: appError, data: fetchedApp } = await supabaseAdmin.from('user_apps')
@@ -103,8 +99,7 @@ async function addUserApp(req: AuthenticatedRequest, res: Response): Promise<Res
                                                             .eq('id', app.id).single()
 
         if (appError || !fetchedApp) {
-            console.error('Error when fetching data from server: ', appError);
-            return res.status(500).json({ error: 'Error fetching tracked apps' });
+            throw appError || Error('Error when fetching app from database');
         }
 
         return res.status(201).json({ app: fetchedApp });
@@ -133,9 +128,7 @@ async function updateUserApp(req: AuthenticatedRequest, res: Response): Promise<
                                                             .from('user_apps').select('*')
                                                             .eq('id', req.params.id).eq('user_id', userData.id);
         
-        if (reqUserAppError) {
-            throw reqUserAppError;
-        }
+        if (reqUserAppError) throw reqUserAppError;
 
         if (reqUserApp && reqUserApp.length === 0) {
             return res.status(404).json({ error: 'App not found' });
@@ -177,7 +170,32 @@ async function updateUserApp(req: AuthenticatedRequest, res: Response): Promise<
 }
 
 async function deleteUserApp(req: AuthenticatedRequest, res: Response): Promise<Response> {
-    throw new Error('Not implemented');
+    try {
+        const userData = req.user;
+
+        if (!userData) {
+            return res.status(500).json({ error: 'Could not find User' });
+        }
+
+        const { error: reqUserAppError , data: reqUserApp} = await supabaseAdmin.from('user_apps')
+                                                            .select('*').eq('id', req.params.id).eq('user_id', userData.id);
+        
+        if (reqUserAppError) throw reqUserAppError; 
+
+        if (reqUserApp && reqUserApp.length === 0) {
+            return res.status(404).json({ error: 'App not found' });
+        }
+
+        const { error: deleteAppError } = await supabaseAdmin.from('user_apps')
+                                        .delete().eq('id', req.params.id).eq('user_id', userData.id);
+        
+        if (deleteAppError) throw deleteAppError;
+
+        return res.status(200).json({ message: 'App deleted successfully!' });
+    } catch (error) {
+        console.error("DELETE USER APP ERROR: ", error);
+        return res.status(500).json({ error: GENERIC_SERVER_ERROR }); 
+    }
 }
 
 
