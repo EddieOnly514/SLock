@@ -6,6 +6,7 @@ import cors from "cors";
 import authRoutes from "./routes/auth";
 import usersRoutes from "./routes/users";
 import appsRoutes from "./routes/apps";
+import catalogRoutes from "./routes/catalog";
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/apps', appsRoutes);
+app.use('/api/catalog', catalogRoutes);
 
 app.listen(port, () => {
   console.log(`Server is listening on PORT: ${port}`);
