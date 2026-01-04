@@ -26,4 +26,34 @@ interface UpdateData {
   avatar_url?: string | null;
 }
 
-export type { ValidationResult, RegisterData, LoginData, RefreshData, UpdateData };
+interface AddAppData {
+  app_id: string;
+  is_blocked?: boolean;
+  is_tracked?: boolean;
+}
+
+interface UpdateAppData {
+  is_blocked?: boolean;
+  is_tracked?: boolean;
+}
+
+interface FocusSessionData {
+  scheduled_duration: number;
+  app_ids: string[];
+}
+
+interface UpdateFocusSessionData {
+  end_time?: string;
+  was_completed?: boolean;
+}
+
+export type { 
+  ValidationResult, 
+  RegisterData, 
+  LoginData, 
+  RefreshData, 
+  UpdateData, 
+  AddAppData,
+  UpdateAppData,
+  FocusSessionData,
+  UpdateFocusSessionData };

@@ -1,12 +1,10 @@
 import type { Request, Response } from "express";
-import type { UserProfile } from "../types/user";
 import { validateUpdatePayload } from "../utils/validate";
 import { supabaseAdmin } from "../config/supabase";
 
-type AuthenticatedRequest = Request & { user?: UserProfile };
 const GENERIC_SERVER_ERROR = 'An unexpected server error occurred.';
 
-async function getUser(req: AuthenticatedRequest, res: Response): Promise<Response> {
+async function getUser(req: Request, res: Response): Promise<Response> {
     try {
         //TODO: possibly get rid of the ID since we are not going to need it
         const userData = req.user; 
@@ -22,7 +20,7 @@ async function getUser(req: AuthenticatedRequest, res: Response): Promise<Respon
     }
 }
 
-async function updateUser(req: AuthenticatedRequest, res: Response): Promise<Response> {
+async function updateUser(req: Request, res: Response): Promise<Response> {
     try {
         const userData = req.user;
 
@@ -46,13 +44,13 @@ async function updateUser(req: AuthenticatedRequest, res: Response): Promise<Res
                                                             .neq('id', userData.id);
             
             if (fetchError) {
-                console.error('Error when fetching data from server: ', fetchError);
-                return res.status(500).json({ error: fetchError });
+                throw fetchError;
             }
 
             if (fetchedData && fetchedData.length > 0) {
                 return res.status(400).json({ error: 'Username is already taken'});
             }
+
             updateFields.username = newUsername;
         }
         
@@ -60,7 +58,7 @@ async function updateUser(req: AuthenticatedRequest, res: Response): Promise<Res
             updateFields.avatar_url = newAvatar_url;
         }
 
-        if (Object.keys(updateFields).length === 0 ) {
+        if (Object.keys(updateFields).length === 0) {
             return res.status(400).json({ error: 'At least one field must be provided for update' });
         }
 
@@ -71,8 +69,7 @@ async function updateUser(req: AuthenticatedRequest, res: Response): Promise<Res
                                                             .single();
         
         if (updateError || !updatedUser) {
-            console.error('Error when updating data from server: ', updateError);
-            return res.status(500).json({ error: updateError });
+            throw updateError || Error('Error when updating user from database');
         }
 
         return res.status(200).json({ user: updatedUser });

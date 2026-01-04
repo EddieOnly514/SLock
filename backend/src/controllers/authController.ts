@@ -147,9 +147,7 @@ async function refreshSession(req: Request, res: Response): Promise<Response> {
   }
 }
 
-type AuthenticatedRequest = Request & { user?: UserProfile };
-
-async function logoutAccount(req: AuthenticatedRequest, res: Response): Promise<Response> {
+async function logoutAccount(req: Request, res: Response): Promise<Response> {
   try {
     const validationResult = validateRefreshPayload(req.body ?? {});
 
