@@ -1,12 +1,10 @@
 import type { Request, Response } from "express";
-import type { UserProfile } from "../types/user";
 import { validateUpdatePayload } from "../utils/validate";
 import { supabaseAdmin } from "../config/supabase";
 
-type AuthenticatedRequest = Request & { user?: UserProfile };
 const GENERIC_SERVER_ERROR = 'An unexpected server error occurred.';
 
-async function getUser(req: AuthenticatedRequest, res: Response): Promise<Response> {
+async function getUser(req: Request, res: Response): Promise<Response> {
     try {
         //TODO: possibly get rid of the ID since we are not going to need it
         const userData = req.user; 
@@ -22,7 +20,7 @@ async function getUser(req: AuthenticatedRequest, res: Response): Promise<Respon
     }
 }
 
-async function updateUser(req: AuthenticatedRequest, res: Response): Promise<Response> {
+async function updateUser(req: Request, res: Response): Promise<Response> {
     try {
         const userData = req.user;
 

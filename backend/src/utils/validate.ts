@@ -5,7 +5,9 @@ import type {
   RefreshData, 
   UpdateData,
   AddAppData,
-  UpdateAppData} from "../types/validation";
+  UpdateAppData,
+  FocusSessionData,
+  UpdateFocusSessionData} from "../types/validation";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -199,7 +201,7 @@ function validateAddAppPayload(payload: Record<string, string>): ValidationResul
 // and validateUpdateAppPayload you can change this into a unified function
 // but we'll come back to that laters
 
-function validateUpdateAppPayload(payload: Record<string, string>): ValidationResult<UpdateAppData> {
+function validateUpdateAppPayload(payload: Record<string, string | boolean>): ValidationResult<UpdateAppData> {
   const is_blocked = payload?.is_blocked;
   const is_tracked = payload?.is_tracked;
 
@@ -240,9 +242,83 @@ function validateUpdateAppPayload(payload: Record<string, string>): ValidationRe
   return { error: null, data: UpdateAppPayload };
 }
 
+function validateCreateSessionPayload(payload: Record<string, string & string[]>): ValidationResult<FocusSessionData> {
+  const raw_scheduled_duration = payload.scheduled_duration;
+  const app_ids = payload.app_ids;
+
+  if (raw_scheduled_duration === undefined || raw_scheduled_duration === null) {
+    return { error: { message: 'schedule_duration must be provided'}, data: null };
+  }
+
+  if (!app_ids) {
+    return { error: { message: 'app_ids must be provided'}, data: null };
+  }
+
+  const scheduled_duration = Number(raw_scheduled_duration);
+
+  if(!(Number.isInteger(scheduled_duration))) {
+    return { error: { message: 'schedule_duration must be an integer'}, data: null }
+  }
+
+  if (scheduled_duration <= 0) {
+    return { error: { message: 'schedule_duration must be a positive integer' }, data: null };
+  }
+
+  if (!(Array.isArray(app_ids))) {
+    return { error: { message: 'app_ids are not in proper array format'}, data: null }
+  }
+
+  if (app_ids.length === 0) {
+    return { error: { message: 'must provide at least one app_id'}, data: null };
+  }
+
+  return { data: {scheduled_duration, app_ids} , error: null };
+}
+
+function validateUpdateSessionPayload(payload: Record<string, any>): ValidationResult<UpdateFocusSessionData> {
+  const raw_end_time = payload?.end_time;
+  const was_completed = payload?.was_completed;
+
+  const updateData: UpdateFocusSessionData = {};
+
+  if (was_completed !== undefined) {
+    if (typeof was_completed === 'boolean') {
+      updateData.was_completed = was_completed;
+    } else if (typeof was_completed === 'string') {
+      if (was_completed === 'false') {
+        updateData.was_completed = false;
+      } else if (was_completed === 'true') {
+        updateData.was_completed = true;
+      } else {
+        return { error: { message: 'Invalid value for was_completed' }, data: null };
+      }
+    } else {
+      return { error: { message: 'Invalid type for was_completed' }, data: null };
+    }
+  }
+
+  // if someone passes in an integer it could possibly passby, but the database enforces that its a timestamp so you can come back to
+  // this if needed
+  if (raw_end_time !== undefined) {
+    const d = new Date(raw_end_time);
+    if (!Number.isNaN(d.valueOf())) {
+      updateData.end_time = raw_end_time;
+    } else {
+      return { error: { message: 'Invalid ISO timestamp format for end time' }, data: null };
+    }
+  }
+
+  return { data: updateData, error: null };
+
+}
+
+
+
 export { validateRegisterPayload, 
   validateLoginPayload, 
   validateRefreshPayload, 
   validateUpdatePayload,
   validateAddAppPayload,
-  validateUpdateAppPayload };
+  validateUpdateAppPayload,
+  validateCreateSessionPayload,
+  validateUpdateSessionPayload };

@@ -1,14 +1,11 @@
 import type { Request, Response } from "express";
-import type { UserProfile } from "../types/user";
 import { supabaseAdmin } from "../config/supabase";
 import { validateAddAppPayload, validateUpdateAppPayload } from "../utils/validate";
 import { AddAppData, UpdateAppData } from "../types/validation";
 
 const GENERIC_SERVER_ERROR = 'An unexpected server error occurred.';
 
-type AuthenticatedRequest = Request & { user?: UserProfile };
-
-async function getUserApps(req: AuthenticatedRequest, res: Response): Promise<Response> {
+async function getUserApps(req: Request, res: Response): Promise<Response> {
     try {
         const userData = req.user;
 
@@ -36,7 +33,7 @@ async function getUserApps(req: AuthenticatedRequest, res: Response): Promise<Re
     }
 }
 
-async function addUserApp(req: AuthenticatedRequest, res: Response): Promise<Response> {
+async function addUserApp(req: Request, res: Response): Promise<Response> {
     try {
         const userData = req.user;
 
@@ -47,8 +44,7 @@ async function addUserApp(req: AuthenticatedRequest, res: Response): Promise<Res
         const { error: validationError, data: validationData } = validateAddAppPayload(req.body);
 
         if (validationError || !validationData ) {
-            const message = validationError?.message || 'Error when validating app payload';
-            return res.status(400).json({ error: message });
+            return res.status(400).json({ error: validationError?.message ?? 'Error when validating app payload' });
         }
 
         const { error: trackedAppError, data: trackedAppData } = await supabaseAdmin.from('tracked_apps').select('*').eq('id', validationData.app_id);
@@ -109,7 +105,7 @@ async function addUserApp(req: AuthenticatedRequest, res: Response): Promise<Res
     }
 }
 
-async function updateUserApp(req: AuthenticatedRequest, res: Response): Promise<Response> {
+async function updateUserApp(req: Request, res: Response): Promise<Response> {
     try {
         const userData = req.user;
 
@@ -169,7 +165,7 @@ async function updateUserApp(req: AuthenticatedRequest, res: Response): Promise<
     }
 }
 
-async function deleteUserApp(req: AuthenticatedRequest, res: Response): Promise<Response> {
+async function deleteUserApp(req: Request, res: Response): Promise<Response> {
     try {
         const userData = req.user;
 

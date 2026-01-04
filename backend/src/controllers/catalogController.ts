@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { supabaseAdmin } from "../config/supabase";
 
-// add filtering later for this function
+// add filtering later for this function, where user can filter apps by name, type, etc.
 async function getCatalog(req: Request, res: Response): Promise<Response> {
     try {
         const { error: catalogError, data: catalogData } = await supabaseAdmin.from('tracked_apps').select('*');

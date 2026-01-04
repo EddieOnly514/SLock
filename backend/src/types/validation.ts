@@ -37,6 +37,16 @@ interface UpdateAppData {
   is_tracked?: boolean;
 }
 
+interface FocusSessionData {
+  scheduled_duration: number;
+  app_ids: string[];
+}
+
+interface UpdateFocusSessionData {
+  end_time?: string;
+  was_completed?: boolean;
+}
+
 export type { 
   ValidationResult, 
   RegisterData, 
@@ -44,4 +54,6 @@ export type {
   RefreshData, 
   UpdateData, 
   AddAppData,
-  UpdateAppData };
+  UpdateAppData,
+  FocusSessionData,
+  UpdateFocusSessionData };
