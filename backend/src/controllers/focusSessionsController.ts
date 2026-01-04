@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import type { UpdateFocusSessionData } from '../types/validation';
 import { supabaseAdmin } from '../config/supabase';
 import { validateCreateSessionPayload, validateUpdateSessionPayload } from '../utils/validate';
 
@@ -79,7 +80,60 @@ async function getFocusSession(req: Request, res: Response): Promise<Response> {
 
 async function updateFocusSession(req: Request, res: Response): Promise<Response> {
     try {
-        throw Error("Not implemented");
+        const userData = req.user;
+
+        if (!userData) {
+            return res.status(500).json({ error: 'Could not find User' });
+        }
+
+        const { error: validationError, data: validationData } = validateUpdateSessionPayload(req.body);
+
+        if (validationError || !validationData) {
+            return res.status(400).json({ error: validationError?.message ?? 'Error when validating payload'});
+        }
+
+        const { error: fetchExistingSessionError, data: ExistingSession } = await supabaseAdmin.from('focus_sessions')
+                                                                            .select('*').eq('id', req.params.id).eq('user_id', userData.id).single();      
+        
+        if (fetchExistingSessionError) {
+            throw fetchExistingSessionError;
+        }
+
+        if (!ExistingSession) {
+            return res.status(404).json({ error: 'Focus session does not exist' });
+        }
+
+        const updateFields: UpdateFocusSessionData = {};
+        
+        if (validationData?.end_time !== undefined) {
+            updateFields.end_time = validationData.end_time;
+        }
+
+        if (validationData?.was_completed !== undefined) {
+            updateFields.was_completed = validationData.was_completed;
+        }
+
+        if (Object.keys(updateFields).length === 0) {
+            return res.status(400).json({ error: 'At least one field must be provided for update' });
+        }
+
+        const { error: updateError } = await supabaseAdmin.from('focus_sessions')
+                                                        .update(updateFields).eq('id', req.params.id)
+                                                        .eq('user_id', userData.id);
+        
+        if (updateError) {
+            throw updateError;
+        }
+
+        const { error: fetchSessionError, data: sessionData } = await supabaseAdmin.from('focus_sessions')
+                                                                .select(`*, focus_session_apps(tracked_apps(*))`).eq('id', req.params.id)
+                                                                .single();
+
+        if (fetchSessionError || !sessionData) {
+            throw fetchSessionError || Error('Error when fetching focus session from database');
+        }
+        
+        return res.status(200).json({ session: sessionData });
     } catch (error) {
         console.error('UPDATE FOCUS SESSION ERROR: ', error);
         return res.status(500).json({ error: GENERIC_SERVER_ERROR });
