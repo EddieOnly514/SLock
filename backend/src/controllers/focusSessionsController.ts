@@ -45,17 +45,45 @@ async function createFocusSession(req: Request, res: Response): Promise<Response
 
         return res.status(201).json({ session: sessionData });
     } catch (error) {
-        console.error(error);
+        console.error('CREATE FOCUS SESSION ERROR: ', error);
         return res.status(500).json({ error: GENERIC_SERVER_ERROR });
     }
 }
 
 async function getFocusSession(req: Request, res: Response): Promise<Response> {
-    throw Error('Not implemented');
+    try {
+        const userData = req.user;
+
+        if (!userData) {
+            return res.status(500).json({ error: 'Could not find User' });
+        }
+
+        const { error: fetchFocusSessionsError, data: focusSessions } = await supabaseAdmin.from('focus_sessions')
+                                                                        .select(`*, focus_session_apps(tracked_apps(*))`).eq('user_id', userData.id)
+                                                                        .order('created_at', { ascending: false });
+        
+        if (fetchFocusSessionsError) {
+            throw fetchFocusSessionsError;
+        }
+
+        if (focusSessions && focusSessions.length === 0) {
+            return res.status(200).json({ sessions: [] });
+        }
+
+        return res.status(200).json({ sessions: focusSessions });
+    } catch (error) {
+        console.error('GET FOCUS SESSION ERROR: ', error);
+        return res.status(500).json({ error: GENERIC_SERVER_ERROR });
+    }
 }
 
 async function updateFocusSession(req: Request, res: Response): Promise<Response> {
-    throw Error('Not implemented');
+    try {
+        throw Error("Not implemented");
+    } catch (error) {
+        console.error('UPDATE FOCUS SESSION ERROR: ', error);
+        return res.status(500).json({ error: GENERIC_SERVER_ERROR });
+    }
 }
 
 
