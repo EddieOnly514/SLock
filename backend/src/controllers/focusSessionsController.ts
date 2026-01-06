@@ -19,10 +19,17 @@ async function createFocusSession(req: Request, res: Response): Promise<Response
             return res.status(400).json({ error: validationError?.message ?? 'Error when validating payload'})
         }
 
-        const { error: createSessionError, data: createdSession } = await supabaseAdmin.from('focus_sessions').insert({ 
-                                                                        user_id: userData.id, 
-                                                                        start_time: new Date().toISOString(), 
-                                                                        scheduled_duration: validationData.scheduled_duration}).select('id').single();
+        const insertData: Record<string, any> = {
+            user_id: userData.id, 
+            start_time: new Date().toISOString(),
+        }
+
+        if (validationData.scheduled_duration !== undefined) {
+            insertData.scheduled_duration = validationData.scheduled_duration;
+        }
+
+        const { error: createSessionError, data: createdSession } = await supabaseAdmin.from('focus_sessions')
+                                                                    .insert(insertData).select('id').single();
 
         if (createSessionError || !createdSession) {
             throw createSessionError || Error('Error when creating focus session');
@@ -109,8 +116,8 @@ async function updateFocusSession(req: Request, res: Response): Promise<Response
             updateFields.end_time = validationData.end_time;
         }
 
-        if (validationData?.was_completed !== undefined) {
-            updateFields.was_completed = validationData.was_completed;
+        if (validationData?.status !== undefined) {
+            updateFields.status = validationData.status;
         }
 
         if (Object.keys(updateFields).length === 0) {

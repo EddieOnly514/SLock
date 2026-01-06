@@ -243,25 +243,11 @@ function validateUpdateAppPayload(payload: Record<string, string | boolean>): Va
 }
 
 function validateCreateSessionPayload(payload: Record<string, string & string[]>): ValidationResult<FocusSessionData> {
-  const raw_scheduled_duration = payload.scheduled_duration;
+  const raw_scheduled_duration = payload?.scheduled_duration;
   const app_ids = payload.app_ids;
-
-  if (raw_scheduled_duration === undefined || raw_scheduled_duration === null) {
-    return { error: { message: 'schedule_duration must be provided'}, data: null };
-  }
 
   if (!app_ids) {
     return { error: { message: 'app_ids must be provided'}, data: null };
-  }
-
-  const scheduled_duration = Number(raw_scheduled_duration);
-
-  if(!(Number.isInteger(scheduled_duration))) {
-    return { error: { message: 'schedule_duration must be an integer'}, data: null }
-  }
-
-  if (scheduled_duration <= 0) {
-    return { error: { message: 'schedule_duration must be a positive integer' }, data: null };
   }
 
   if (!(Array.isArray(app_ids))) {
@@ -272,28 +258,36 @@ function validateCreateSessionPayload(payload: Record<string, string & string[]>
     return { error: { message: 'must provide at least one app_id'}, data: null };
   }
 
-  return { data: {scheduled_duration, app_ids} , error: null };
+  const data: FocusSessionData = {app_ids};
+
+  if (raw_scheduled_duration !== undefined) {
+    const scheduled_duration = Number(raw_scheduled_duration);
+
+    if(!(Number.isInteger(scheduled_duration))) {
+      return { error: { message: 'scheduled_duration must be an integer'}, data: null }
+    }
+
+    if (scheduled_duration <= 0) {
+      return { error: { message: 'schedule_duration must be a positive integer' }, data: null };
+    }
+
+    data.scheduled_duration = scheduled_duration;
+  }
+
+  return { data, error: null };
 }
 
-function validateUpdateSessionPayload(payload: Record<string, any>): ValidationResult<UpdateFocusSessionData> {
+function validateUpdateSessionPayload(payload: Record<string, string>): ValidationResult<UpdateFocusSessionData> {
   const raw_end_time = payload?.end_time;
-  const was_completed = payload?.was_completed;
+  const status = payload?.status;
 
   const updateData: UpdateFocusSessionData = {};
 
-  if (was_completed !== undefined) {
-    if (typeof was_completed === 'boolean') {
-      updateData.was_completed = was_completed;
-    } else if (typeof was_completed === 'string') {
-      if (was_completed === 'false') {
-        updateData.was_completed = false;
-      } else if (was_completed === 'true') {
-        updateData.was_completed = true;
-      } else {
-        return { error: { message: 'Invalid value for was_completed' }, data: null };
-      }
+  if (status !== undefined) {
+    if (status === 'active' || status === 'completed' || status === 'overridden') {
+      updateData.status = status;
     } else {
-      return { error: { message: 'Invalid type for was_completed' }, data: null };
+      return { error: { message: 'Invalid status'}, data: null};
     }
   }
 

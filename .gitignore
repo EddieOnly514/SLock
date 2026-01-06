@@ -39,3 +39,5 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+cursor_learning_to_code_through_project.md

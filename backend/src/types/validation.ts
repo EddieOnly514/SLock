@@ -38,13 +38,13 @@ interface UpdateAppData {
 }
 
 interface FocusSessionData {
-  scheduled_duration: number;
+  scheduled_duration?: number;
   app_ids: string[];
 }
 
 interface UpdateFocusSessionData {
   end_time?: string;
-  was_completed?: boolean;
+  status?: 'active' | 'completed' | 'overridden';
 }
 
 export type { 

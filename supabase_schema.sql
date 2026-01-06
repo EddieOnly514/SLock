@@ -267,17 +267,6 @@ CREATE TABLE circle_members (
 
 CREATE TYPE SESSION_STATUS AS ENUM ('active', 'completed', 'overridden');
 
-CREATE TABLE sessions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  start_time TIMESTAMP NOT NULL DEFAULT NOW(),
-  end_time TIMESTAMP,
-  status SESSION_STATUS NOT NULL,
-  apps_shielded JSON,
-  points INTEGER DEFAULT 0, 
-  FOREIGN KEY (user_id) REFERENCES users(id)
-);
-
 CREATE TABLE daily_summaries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
@@ -288,8 +277,6 @@ CREATE TABLE daily_summaries (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
-CREATE TYPE ACTIVITY_TYPE AS ENUM ('session_complete', 'session_override', 'streak_milestone');
-
 CREATE TABLE activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
@@ -299,7 +286,7 @@ CREATE TABLE activities (
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (circle_id) REFERENCES circles(id),
-  FOREIGN KEY (session_id) REFERENCES sessions(id)
+  FOREIGN KEY (session_id) REFERENCES focus_sessions(id)
 );
 
 CREATE TABLE tracked_apps (
@@ -339,9 +326,9 @@ CREATE TABLE focus_sessions (
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   start_time TIMESTAMP WITH TIME ZONE NOT NULL,
   end_time TIMESTAMP WITH TIME ZONE,
-  scheduled_duration INTEGER NOT NULL,
+  scheduled_duration INTEGER,
   actual_duration INTEGER,
-  was_completed BOOLEAN DEFAULT false,
+  status SESSION_STATUS DEFAULT 'active',
   points_earned INTEGER DEFAULT 0,
   tree_growth DECIMAL(5,2) DEFAULT 0.00,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -354,22 +341,20 @@ CREATE TABLE focus_session_apps (
   UNIQUE(session_id, app_id)
 );
 
-CREATE INDEX idx_sessions_user_id ON sessions (user_id);
 CREATE INDEX idx_activities_user_id ON activities (user_id);
 CREATE INDEX idx_activities_circle_id ON activities (circle_id);
 CREATE INDEX idx_circle_members_user_id ON circle_members (user_id);
 CREATE INDEX idx_circle_members_circle_id ON circle_members (circle_id);
 CREATE INDEX idx_daily_summaries_user_id ON daily_summaries (user_id);
-CREATE INDEX idx_sessions_start_time ON sessions (start_time);
 CREATE INDEX idx_daily_summaries_date ON daily_summaries (date);
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_user_apps_user_id ON user_apps(user_id);
 CREATE INDEX idx_focus_sessions_user_id ON focus_sessions(user_id);
+CREATE INDEX idx_focus_sessions_start_time ON focus_sessions(start_time);
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE circles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE circle_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_summaries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tracked_apps ENABLE ROW LEVEL SECURITY;
@@ -400,14 +385,6 @@ WITH CHECK (user_id = auth.uid());
 CREATE POLICY "Users can be removed from circles"
 ON circle_members FOR DELETE 
 USING (user_id = auth.uid());
-
-CREATE POLICY "Users can view their own sessions"
-ON sessions FOR SELECT
-USING (user_id = auth.uid());
-
-CREATE POLICY "Users can write their own sessions"
-ON sessions FOR INSERT 
-WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "Users can read activities only from their own circles"
 ON activities FOR SELECT 
