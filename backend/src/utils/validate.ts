@@ -1,3 +1,4 @@
+import { raw } from "express";
 import type {
   ValidationResult, 
   RegisterData, 
@@ -7,7 +8,8 @@ import type {
   AddAppData,
   UpdateAppData,
   FocusSessionData,
-  UpdateFocusSessionData} from "../types/validation";
+  UpdateFocusSessionData,
+  AppUsageData } from "../types/validation";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -18,9 +20,9 @@ function validateRegisterPayload(payload: Record<string, string>): ValidationRes
   const rawUsername = payload.username;
   const rawPassword = payload.password;
 
-  const trimmedEmail = rawEmail.trim();
-  const trimmedUsername = rawUsername.trim();
-  const trimmedPassword = rawPassword.trim();
+  const trimmedEmail = rawEmail?.trim();
+  const trimmedUsername = rawUsername?.trim();
+  const trimmedPassword = rawPassword?.trim();
 
   if (!trimmedEmail || !trimmedUsername || !trimmedPassword) {
     return { error: { message: "Email, username, and password are required" }, data: null };
@@ -306,6 +308,77 @@ function validateUpdateSessionPayload(payload: Record<string, string>): Validati
 
 }
 
+function validateAppUsagePayload(payload: Record<string, string>): ValidationResult<AppUsageData> {
+  const raw_app_id = payload.app_id;
+  const raw_date = payload.date;
+  const raw_duration_minutes = payload?.duration_minutes;
+  const raw_sessions_count = payload?.sessions_count;
+  
+  if (raw_app_id === undefined) {
+    return { error: { message: 'app_id must be provided' }, data: null };
+  }
+
+  const app_id = raw_app_id.trim();
+
+  if (!app_id) {
+    return { error: { message: 'app_id must not be an empty string' }, data: null};
+  }
+
+  if (raw_date === undefined) {
+    return { error: { message: 'date must be provided'}, data: null};
+  }
+
+  const date = new Date(raw_date);
+
+  if (Number.isNaN(date.valueOf())) {
+    return { error: { message: 'Must be a valid date' }, data: null };
+  } 
+
+  const AppUsagePayload: AppUsageData = {app_id, date: raw_date};
+
+  if (raw_duration_minutes !== undefined) {
+    const duration_minutes = Number(raw_duration_minutes);
+
+    if (isNaN(duration_minutes)) {
+      return { error: { message: 'duration_minutes must be a number' }, data: null };
+    }
+
+    if(!(Number.isInteger(duration_minutes))) {
+      return { error: { message: 'duration_minutes must be an integer' }, data: null }
+    }
+
+    if (duration_minutes < 0) {
+      return { error: { message: 'duration_minutes must be a non-negative integer' }, data: null };
+    }
+
+    AppUsagePayload.duration_minutes = duration_minutes;
+  } else {
+    AppUsagePayload.duration_minutes = 0;
+  }
+
+  if (raw_sessions_count !== undefined) {
+    const sessions_count = Number(raw_sessions_count);
+
+    if (isNaN(sessions_count)) {
+      return { error: { message: 'sessions_count must be a number' }, data: null };
+    }
+
+    if(!(Number.isInteger(sessions_count))) {
+      return { error: { message: 'sessions_count must be an integer' }, data: null };
+    }
+
+    if (sessions_count < 0) {
+      return { error: { message: 'sessions_count must be a non-negative integer' }, data: null };
+    }
+
+    AppUsagePayload.sessions_count = sessions_count;
+  } else {
+    AppUsagePayload.sessions_count = 0;
+  }
+
+  return { data: AppUsagePayload, error: null };
+}
+
 
 
 export { validateRegisterPayload, 
@@ -315,4 +388,5 @@ export { validateRegisterPayload,
   validateAddAppPayload,
   validateUpdateAppPayload,
   validateCreateSessionPayload,
-  validateUpdateSessionPayload };
+  validateUpdateSessionPayload,
+  validateAppUsagePayload };

@@ -1,57 +1,5 @@
 -- SLock Database Schema for Supabase PostgreSQL
--- Run this in Supabase SQL Editor to create all tables
-
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- ============================================
--- USERS TABLE
--- ============================================
--- CREATE TABLE IF NOT EXISTS users (
---   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
---   email TEXT UNIQUE,
---   phone TEXT UNIQUE,
---   username TEXT UNIQUE NOT NULL,
---   profile_photo_url TEXT,
---   points INTEGER DEFAULT 0,
---   level INTEGER DEFAULT 1,
---   tree_growth DECIMAL(5,2) DEFAULT 0.00,
---   current_streak INTEGER DEFAULT 0,
---   longest_streak INTEGER DEFAULT 0,
---   last_activity_date TIMESTAMP WITH TIME ZONE,
---   is_profile_public BOOLEAN DEFAULT true,
---   allow_friend_requests BOOLEAN DEFAULT true,
---   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
---   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
--- );
-
--- ============================================
--- SCREEN TIME TABLE
--- ============================================
--- CREATE TABLE IF NOT EXISTS screen_time (
---   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
---   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
---   app_id UUID REFERENCES tracked_apps(id) ON DELETE CASCADE,
---   date DATE NOT NULL,
---   duration_minutes INTEGER DEFAULT 0,
---   sessions_count INTEGER DEFAULT 0,
---   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
---   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
---   UNIQUE(user_id, app_id, date)
--- );
-
--- ============================================
--- FRIENDS TABLE
--- ============================================
--- CREATE TABLE IF NOT EXISTS friends (
---   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
---   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
---   friend_id UUID REFERENCES users(id) ON DELETE CASCADE,
---   status TEXT CHECK (status IN ('pending', 'accepted', 'blocked')) DEFAULT 'pending',
---   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
---   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
---   UNIQUE(user_id, friend_id)
--- );
+-- Additional commented tables below for future additions
 
 -- ============================================
 -- ACHIEVEMENTS TABLE
@@ -91,145 +39,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- );
 
 -- ============================================
--- APP SCHEDULES TABLE (For scheduled blocking)
--- ============================================
--- CREATE TABLE IF NOT EXISTS app_schedules (
---   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
---   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
---   app_id UUID REFERENCES tracked_apps(id) ON DELETE CASCADE,
---   days_of_week TEXT[], -- Array of days: ['monday', 'tuesday', etc]
---   start_time TIME NOT NULL,
---   end_time TIME NOT NULL,
---   is_active BOOLEAN DEFAULT true,
---   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
---   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
--- );
-
--- ============================================
--- ROW LEVEL SECURITY POLICIES
--- ============================================
-
--- Enable RLS on all tables
--- ALTER TABLE users ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE user_apps ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE screen_time ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE focus_sessions ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE focus_session_apps ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE friends ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE app_schedules ENABLE ROW LEVEL SECURITY;
-
--- Users: Can read their own data and public profiles
--- CREATE POLICY "Users can view own profile" ON users FOR SELECT USING (auth.uid() = id);
--- CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (auth.uid() = id);
--- CREATE POLICY "Users can view public profiles" ON users FOR SELECT USING (is_profile_public = true);
-
--- User Apps: Users can only see and manage their own apps
--- CREATE POLICY "Users can view own apps" ON user_apps FOR SELECT USING (auth.uid() = user_id);
--- CREATE POLICY "Users can insert own apps" ON user_apps FOR INSERT WITH CHECK (auth.uid() = user_id);
--- CREATE POLICY "Users can update own apps" ON user_apps FOR UPDATE USING (auth.uid() = user_id);
--- CREATE POLICY "Users can delete own apps" ON user_apps FOR DELETE USING (auth.uid() = user_id);
-
--- Screen Time: Users can only see and manage their own data
--- CREATE POLICY "Users can view own screen time" ON screen_time FOR SELECT USING (auth.uid() = user_id);
--- CREATE POLICY "Users can insert own screen time" ON screen_time FOR INSERT WITH CHECK (auth.uid() = user_id);
--- CREATE POLICY "Users can update own screen time" ON screen_time FOR UPDATE USING (auth.uid() = user_id);
-
--- Focus Sessions: Users can only see and manage their own sessions
--- CREATE POLICY "Users can view own sessions" ON focus_sessions FOR SELECT USING (auth.uid() = user_id);
--- CREATE POLICY "Users can insert own sessions" ON focus_sessions FOR INSERT WITH CHECK (auth.uid() = user_id);
--- CREATE POLICY "Users can update own sessions" ON focus_sessions FOR UPDATE USING (auth.uid() = user_id);
-
--- Friends: Users can view their own friendships
--- CREATE POLICY "Users can view own friends" ON friends FOR SELECT USING (auth.uid() = user_id OR auth.uid() = friend_id);
--- CREATE POLICY "Users can insert friendships" ON friends FOR INSERT WITH CHECK (auth.uid() = user_id);
--- CREATE POLICY "Users can update friendships" ON friends FOR UPDATE USING (auth.uid() = user_id OR auth.uid() = friend_id);
--- CREATE POLICY "Users can delete friendships" ON friends FOR DELETE USING (auth.uid() = user_id);
-
--- Notifications: Users can only see their own notifications
--- CREATE POLICY "Users can view own notifications" ON notifications FOR SELECT USING (auth.uid() = user_id);
--- CREATE POLICY "Users can update own notifications" ON notifications FOR UPDATE USING (auth.uid() = user_id);
-
--- App Schedules: Users can manage their own schedules
--- CREATE POLICY "Users can view own schedules" ON app_schedules FOR SELECT USING (auth.uid() = user_id);
--- CREATE POLICY "Users can insert own schedules" ON app_schedules FOR INSERT WITH CHECK (auth.uid() = user_id);
--- CREATE POLICY "Users can update own schedules" ON app_schedules FOR UPDATE USING (auth.uid() = user_id);
--- CREATE POLICY "Users can delete own schedules" ON app_schedules FOR DELETE USING (auth.uid() = user_id);
-
--- Tracked Apps: Public read access
--- CREATE POLICY "Anyone can view tracked apps" ON tracked_apps FOR SELECT TO authenticated USING (true);
-
--- Achievements: Public read access
--- CREATE POLICY "Anyone can view achievements" ON achievements FOR SELECT TO authenticated USING (true);
-
--- User Achievements: Users can view their own achievements
--- CREATE POLICY "Users can view own achievements" ON user_achievements FOR SELECT USING (auth.uid() = user_id);
-
--- ============================================
--- FUNCTIONS AND TRIGGERS
--- ============================================
-
--- Function to update updated_at timestamp
--- CREATE OR REPLACE FUNCTION update_updated_at_column()
--- RETURNS TRIGGER AS $$
--- BEGIN
---     NEW.updated_at = NOW();
---     RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
-
--- Triggers for updated_at
--- CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
---     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- CREATE TRIGGER update_screen_time_updated_at BEFORE UPDATE ON screen_time
---     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- CREATE TRIGGER update_friends_updated_at BEFORE UPDATE ON friends
---     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- CREATE TRIGGER update_app_schedules_updated_at BEFORE UPDATE ON app_schedules
---     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Function to create user profile when auth user is created
--- CREATE OR REPLACE FUNCTION public.handle_new_user()
--- RETURNS TRIGGER AS $$
--- BEGIN
---   INSERT INTO public.users (id, email, phone, username)
---   VALUES (
---     NEW.id,
---     NEW.email,
---     NEW.phone,
---     COALESCE(NEW.raw_user_meta_data->>'username', SPLIT_PART(COALESCE(NEW.email, NEW.phone), '@', 1))
---   );
---   RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Trigger to automatically create user profile
--- DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
--- CREATE TRIGGER on_auth_user_created
---   AFTER INSERT ON auth.users
---   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- ============================================
--- INDEXES FOR PERFORMANCE
--- ============================================
-
--- CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
--- CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
--- CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
--- CREATE INDEX IF NOT EXISTS idx_user_apps_user_id ON user_apps(user_id);
--- CREATE INDEX IF NOT EXISTS idx_screen_time_user_id ON screen_time(user_id);
--- CREATE INDEX IF NOT EXISTS idx_screen_time_date ON screen_time(date);
--- CREATE INDEX IF NOT EXISTS idx_focus_sessions_user_id ON focus_sessions(user_id);
--- CREATE INDEX IF NOT EXISTS idx_friends_user_id ON friends(user_id);
--- CREATE INDEX IF NOT EXISTS idx_friends_friend_id ON friends(friend_id);
--- CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
--- CREATE INDEX IF NOT EXISTS idx_app_schedules_user_id ON app_schedules(user_id);
-
--- ============================================
 -- STORAGE BUCKETS
 -- ============================================
 
@@ -245,7 +54,24 @@ CREATE TABLE users (
   phone TEXT,
   avatar_url TEXT, 
   privacy_preset TEXT NOT NULL DEFAULT 'totals_only',
+  current_streak INTEGER DEFAULT 0,
+  longest_streak INTEGER DEFAULT 0,
+  last_activity_date DATE,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+
+CREATE TYPE FRIEND_STATUS AS ENUM ('pending', 'accepted', 'blocked');
+
+CREATE TABLE friends (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  friend_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status FRIEND_STATUS NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, friend_id),
+  CHECK (user_id != friend_id)
 );
 
 CREATE TABLE circles (
@@ -276,6 +102,8 @@ CREATE TABLE daily_summaries (
   UNIQUE (user_id, date),
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+CREATE TYPE ACTIVITY_TYPE AS ENUM ('session_completed', 'session_override', 'streak_milestone', 'friend_joined');
 
 CREATE TABLE activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -321,6 +149,18 @@ CREATE TABLE user_apps (
   UNIQUE(user_id, app_id)
 );
 
+CREATE TABLE app_schedules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  app_id UUID NOT NULL REFERENCES tracked_apps(id) ON DELETE CASCADE,
+  days_of_week TEXT[] NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 CREATE TABLE focus_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -341,6 +181,18 @@ CREATE TABLE focus_session_apps (
   UNIQUE(session_id, app_id)
 );
 
+CREATE TABLE app_usage (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  app_id UUID NOT NULL REFERENCES tracked_apps(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  duration_minutes INTEGER DEFAULT 0,
+  sessions_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, app_id, date)
+);
+
 CREATE INDEX idx_activities_user_id ON activities (user_id);
 CREATE INDEX idx_activities_circle_id ON activities (circle_id);
 CREATE INDEX idx_circle_members_user_id ON circle_members (user_id);
@@ -352,6 +204,19 @@ CREATE INDEX idx_user_apps_user_id ON user_apps(user_id);
 CREATE INDEX idx_focus_sessions_user_id ON focus_sessions(user_id);
 CREATE INDEX idx_focus_sessions_start_time ON focus_sessions(start_time);
 
+CREATE INDEX idx_app_usage_user_id ON app_usage(user_id);
+CREATE INDEX idx_app_usage_app_id ON app_usage(app_id);
+CREATE INDEX idx_app_usage_date ON app_usage(date);
+CREATE INDEX idx_app_usage_user_date ON app_usage(user_id, date);
+
+CREATE INDEX idx_app_schedules_user_id ON app_schedules(user_id);
+CREATE INDEX idx_app_schedules_app_id ON app_schedules(app_id);
+CREATE INDEX idx_app_schedules_is_active ON app_schedules(is_active);
+
+CREATE INDEX idx_friends_user_id ON friends(user_id);
+CREATE INDEX idx_friends_friend_id ON friends(friend_id);
+CREATE INDEX idx_friends_status ON friends(status);
+
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE circles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE circle_members ENABLE ROW LEVEL SECURITY;
@@ -361,6 +226,9 @@ ALTER TABLE tracked_apps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_apps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE focus_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE focus_session_apps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE friends ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_schedules ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view their own user record"
 ON users FOR SELECT 
@@ -392,6 +260,10 @@ USING (
   (circle_id IS NULL AND user_id = auth.uid())
   OR
   (circle_id IN (SELECT circle_id FROM circle_members WHERE user_id = auth.uid())));
+
+CREATE POLICY "Users can create own activities"
+ON activities FOR INSERT 
+WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "Users can read their own daily summaries"
 ON daily_summaries FOR SELECT 
@@ -463,3 +335,47 @@ CREATE POLICY "Users can delete own session apps" ON focus_session_apps FOR DELE
       AND focus_sessions.user_id = auth.uid()
     )
   );
+
+CREATE POLICY "Users can view own app usage" 
+ON app_usage FOR SELECT 
+USING (user_id = auth.uid());
+
+CREATE POLICY "Users can insert own app usage" 
+ON app_usage FOR INSERT 
+WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can update own app usage" 
+ON app_usage FOR UPDATE 
+USING (user_id = auth.uid());
+
+CREATE POLICY "Users can view own friendships" 
+ON friends FOR SELECT 
+USING (user_id = auth.uid() OR friend_id = auth.uid());
+
+CREATE POLICY "Users can create friendships" 
+ON friends FOR INSERT 
+WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can update own friendships" 
+ON friends FOR UPDATE 
+USING (user_id = auth.uid() OR friend_id = auth.uid());
+
+CREATE POLICY "Users can delete own friendships" 
+ON friends FOR DELETE 
+USING (user_id = auth.uid());
+
+CREATE POLICY "Users can view own app schedules" 
+ON app_schedules FOR SELECT 
+USING (user_id = auth.uid());
+
+CREATE POLICY "Users can create own app schedules" 
+ON app_schedules FOR INSERT 
+WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can update own app schedules" 
+ON app_schedules FOR UPDATE 
+USING (user_id = auth.uid());
+
+CREATE POLICY "Users can delete own app schedules" 
+ON app_schedules FOR DELETE 
+USING (user_id = auth.uid());

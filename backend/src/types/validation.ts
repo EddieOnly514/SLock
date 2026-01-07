@@ -47,6 +47,13 @@ interface UpdateFocusSessionData {
   status?: 'active' | 'completed' | 'overridden';
 }
 
+interface AppUsageData {
+  app_id: string;
+  date: string;
+  duration_minutes?: number; 
+  sessions_count?: number;
+}
+
 export type { 
   ValidationResult, 
   RegisterData, 
@@ -56,4 +63,5 @@ export type {
   AddAppData,
   UpdateAppData,
   FocusSessionData,
-  UpdateFocusSessionData };
+  UpdateFocusSessionData,
+  AppUsageData };
