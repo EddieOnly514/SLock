@@ -54,6 +54,22 @@ interface AppUsageData {
   sessions_count?: number;
 }
 
+interface AppScheduleData {
+  app_id: string;
+  days_of_week: string[];
+  start_time: string;
+  end_time: string;
+  is_active?: boolean;
+}
+
+interface UpdateAppScheduleData {
+  app_id?: string;
+  days_of_week?: string[];
+  start_time?: string;
+  end_time?: string;
+  is_active?: boolean;
+}
+
 export type { 
   ValidationResult, 
   RegisterData, 
@@ -64,4 +80,6 @@ export type {
   UpdateAppData,
   FocusSessionData,
   UpdateFocusSessionData,
-  AppUsageData };
+  AppUsageData,
+  AppScheduleData,
+  UpdateAppScheduleData };

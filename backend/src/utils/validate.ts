@@ -1,4 +1,3 @@
-import { raw } from "express";
 import type {
   ValidationResult, 
   RegisterData, 
@@ -9,7 +8,9 @@ import type {
   UpdateAppData,
   FocusSessionData,
   UpdateFocusSessionData,
-  AppUsageData } from "../types/validation";
+  AppUsageData, 
+  AppScheduleData,
+  UpdateAppScheduleData } from "../types/validation";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -379,7 +380,173 @@ function validateAppUsagePayload(payload: Record<string, string>): ValidationRes
   return { data: AppUsagePayload, error: null };
 }
 
+function validateCreateSchedulePayload(payload: Record<string, any>): ValidationResult<AppScheduleData> { 
+  const raw_app_id = payload.app_id;
+  const raw_days_of_week = payload.days_of_week;
+  const raw_start_time = payload.start_time;
+  const raw_end_time = payload.end_time;
+  const raw_is_active = payload?.is_active;
 
+  if (raw_app_id === undefined) {
+    return { error: { message: 'app_id must be provided'}, data: null};
+  }
+
+  if (!raw_app_id.trim()) {
+    return { error: { message: 'app_id must be provided'}, data: null};
+  }
+
+  if (raw_days_of_week === undefined) {
+    return { error: { message: 'days_of_week must be provided'}, data: null};
+  }
+
+  if (!Array.isArray(raw_days_of_week)) {
+    return { error: { message: 'days_of_week must be an array'}, data: null};
+  }
+
+  if (raw_days_of_week.length === 0) {
+    return { error: { message: 'days_of_week must not be empty'}, data: null};
+  }
+
+  const normalizedDays = raw_days_of_week.map(day => day.toLowerCase());
+  const unique_days = new Set(normalizedDays);
+
+  if (unique_days.size !== normalizedDays.length) {
+    return { error: { message: 'days_of_week must not contain duplicates'}, data: null};
+  }
+
+  if (!normalizedDays.every(item => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].includes(item))) {
+    return { error: { message: 'each element in days of week must be a valid day name'}, data: null};
+  }
+
+  if (raw_start_time === undefined) {
+    return { error: { message: 'start_time must not be empty' }, data: null};
+  }
+
+  if (!(/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.test(raw_start_time))) {
+    return { error: { message: 'start_time must be in a valid HH:MM:SS format'}, data: null};
+  }
+
+  if (raw_end_time === undefined) {
+    return { error: { message: 'end_time must not be empty' }, data: null};
+  }
+
+  if (!(/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.test(raw_end_time))) {
+    return { error: { message: 'end_time must be in a valid HH:MM:SS format'}, data: null};
+  }
+
+  if (raw_start_time >= raw_end_time) {
+    return { error: { message: 'start_time must be less than end_time'}, data: null};
+  }
+
+  const appSchedulePayload: AppScheduleData = {
+                                      app_id: raw_app_id.trim(), 
+                                      days_of_week: normalizedDays, 
+                                      start_time: raw_start_time,
+                                      end_time: raw_end_time}
+
+  if (raw_is_active === undefined) {
+    appSchedulePayload.is_active = true;
+  }
+
+  if (raw_is_active !== undefined) {
+    if (typeof raw_is_active === 'boolean') {
+      appSchedulePayload.is_active = raw_is_active;
+    } else if (typeof raw_is_active === 'string') {
+      if (raw_is_active === 'false') {
+        appSchedulePayload.is_active = false;
+      } else if (raw_is_active === 'true') {
+        appSchedulePayload.is_active = true;
+      } else {
+        return { error: { message: 'Invalid value for is_active '}, data: null};
+      }
+    } else {
+      return { error: { message: 'Invalid type for is_active '}, data: null };
+    }
+  }
+
+  return { data: appSchedulePayload, error: null };
+}
+
+function validateUpdateSchedulePayload(payload: Record<string, any>): ValidationResult<UpdateAppScheduleData> {  
+  const raw_app_id = payload?.app_id;
+  const raw_days_of_week = payload?.days_of_week;
+  const raw_start_time = payload?.start_time;
+  const raw_end_time = payload?.end_time;
+  const raw_is_active = payload?.is_active;
+
+  const updateFields: UpdateAppScheduleData = {};
+
+  if (raw_app_id !== undefined) {
+    if (typeof raw_app_id !== 'string' || !raw_app_id.trim()) {
+      return { error: { message: 'app_id must be provided'}, data: null};
+    }  
+    updateFields.app_id = raw_app_id.trim();
+  }
+
+  if (raw_days_of_week !== undefined) {
+    if (!Array.isArray(raw_days_of_week)) {
+      return { error: { message: 'days_of_week must be an array'}, data: null};
+    }
+  
+    if (raw_days_of_week.length === 0) {
+      return { error: { message: 'days_of_week must not be empty'}, data: null};
+    }
+
+    if (!raw_days_of_week.every(item => typeof item === 'string')) {
+      return { error: { message: 'each element in days_of_week must be a string'}, data: null};
+    }
+  
+    const days_of_week = raw_days_of_week.map(day => day.toLowerCase());
+    const unique_days = new Set(days_of_week);
+  
+    if (unique_days.size !== days_of_week.length) {
+      return { error: { message: 'days_of_week must not contain duplicates'}, data: null};
+    }
+  
+    if (!days_of_week.every(item => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].includes(item))) {
+      return { error: { message: 'each element in days of week must be a valid day name'}, data: null};
+    }
+    updateFields.days_of_week = days_of_week;
+  }
+
+  if (raw_start_time !== undefined) {
+    if (typeof raw_start_time !== 'string' || !(/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.test(raw_start_time))) {
+      return { error: { message: 'start_time must be in a valid HH:MM:SS format'}, data: null};
+    }
+    updateFields.start_time = raw_start_time;
+  }
+
+  if (raw_end_time !== undefined) {
+    if (typeof raw_end_time !== 'string' || !(/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.test(raw_end_time))) {
+      return { error: { message: 'end_time must be in a valid HH:MM:SS format'}, data: null};
+    }
+    updateFields.end_time = raw_end_time;
+  }
+
+  if (updateFields.start_time && updateFields.end_time) {
+    if (updateFields.start_time >= updateFields.end_time) {
+      return { error: { message: 'start_time must be less than end_time'}, data: null};
+    }
+  }
+
+  if (raw_is_active !== undefined) {
+    if (typeof raw_is_active === 'boolean') {
+      updateFields.is_active = raw_is_active;
+    } else if (typeof raw_is_active === 'string') {
+      if (raw_is_active === 'false') {
+        updateFields.is_active = false;
+      } else if (raw_is_active === 'true') {
+        updateFields.is_active = true;
+      } else {
+        return { error: { message: 'Invalid value for is_active '}, data: null};
+      }
+    } else {
+      return { error: { message: 'Invalid type for is_active '}, data: null };
+    }
+  }
+
+  return { data: updateFields, error: null};
+}
 
 export { validateRegisterPayload, 
   validateLoginPayload, 
@@ -389,4 +556,6 @@ export { validateRegisterPayload,
   validateUpdateAppPayload,
   validateCreateSessionPayload,
   validateUpdateSessionPayload,
-  validateAppUsagePayload };
+  validateAppUsagePayload,
+  validateCreateSchedulePayload,
+  validateUpdateSchedulePayload };
