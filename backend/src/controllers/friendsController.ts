@@ -79,9 +79,41 @@ async function sendFriendRequest(req: Request, res: Response): Promise<Response>
 
 async function getFriends(req: Request, res: Response): Promise<Response> {
     try {
-        throw Error('Not Implemented')
+        const userData = req.user;
+
+        if (userData === undefined) {
+            return res.status(500).json({ error: 'Could not find User '});
+        }
+
+        let query = supabaseAdmin.from('friends')
+                        .select('*, users!friends_friend_id_fkey(id, username, email, avatar_url, created_at)')
+                        .or(`user_id.eq.${userData.id},friend_id.eq.${userData.id}`);
+
+        if (req.query.status) {
+            query = query.eq('status', req.query.status);
+        }
+
+        if (req.query.direction) {
+            if (req.query.direction === 'sent') {
+                query = query.eq('user_id', userData.id);
+            } else if (req.query.direction === 'received') {
+                query = query.eq('friend_id', userData.id);
+            }
+        }
+
+        const { error: fetchFriendsError, data: fetchedFriends } = await query;
+
+        if (fetchFriendsError) {
+            throw fetchFriendsError;
+        }
+
+        if (!fetchedFriends || fetchedFriends.length === 0) {
+            return res.status(200).json({ friends: [] });
+        }
+
+        return res.status(200).json({ friends: fetchedFriends });
     } catch (error) {
-        console.error('GET FRIEND REQUEST ERROR: ', error);
+        console.error('GET FRIENDS ERROR: ', error);
         return res.status(500).json({ error: 'An unexpected server error has occured' });
     }
 }
