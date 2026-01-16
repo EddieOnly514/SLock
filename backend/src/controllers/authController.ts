@@ -39,8 +39,14 @@ async function registerAccount(req: Request, res: Response): Promise<Response> {
 
     const { error: profileError } = await supabaseClient
       .from("users")
-      .update({ privacy_preset: "totals_only" })
-      .eq("id", authData.user.id);
+      .upsert({
+        id: authData.user.id,
+        username,
+        email: authData.user.email!,
+        privacy_preset: "totals_only"
+      }, { onConflict: "id" })
+      .select()
+      .single();
 
     if (profileError) {
       console.error("Profile creation error:", profileError.message);

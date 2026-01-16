@@ -10,7 +10,9 @@ import type {
   UpdateFocusSessionData,
   AppUsageData, 
   AppScheduleData,
-  UpdateAppScheduleData } from "../types/validation";
+  UpdateAppScheduleData, 
+  FriendRequestData,
+  UpdateFriendData } from "../types/validation";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -548,6 +550,50 @@ function validateUpdateSchedulePayload(payload: Record<string, any>): Validation
   return { data: updateFields, error: null};
 }
 
+function validateFriendRequestPayload(payload: Record<string, string>): ValidationResult<FriendRequestData> {
+  const raw_friend_id = payload.friend_id;
+
+  if (raw_friend_id === undefined) {
+    return { error: { message: 'friend_id must be provided' }, data: null};
+  }
+
+  if (typeof raw_friend_id !== 'string') {
+    return { error: { message: 'friend_id must be a string' }, data: null};
+  }
+
+  const friend_id = raw_friend_id.trim();
+
+  if (!friend_id) {
+    return { error: { message: 'friend_id must not be empty' }, data: null};
+  }
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(friend_id)) {
+    return { error: { message: 'friend_id must be a valid UUID' }, data: null};
+  }
+
+  return { data: { friend_id }, error: null};
+}
+
+function validateUpdateFriendPayload(payload: Record<string, string>): ValidationResult<UpdateFriendData> {
+  const raw_status = payload.status;
+
+  if (raw_status === undefined) {
+    return { error: { message: 'status must be provided'}, data: null};
+  }
+
+  if (typeof raw_status !== 'string') {
+    return { error: { message: 'status must be a string'}, data: null};
+  }
+
+  const validStatuses = ['pending', 'accepted', 'blocked'];
+  if (!validStatuses.includes(raw_status)) {
+    return { error: { message: 'status must be one of: pending, accepted, blocked'}, data: null};
+  }
+
+  return { data: { status: raw_status as 'pending' | 'accepted' | 'blocked' }, error: null};
+}
+
 export { validateRegisterPayload, 
   validateLoginPayload, 
   validateRefreshPayload, 
@@ -558,4 +604,6 @@ export { validateRegisterPayload,
   validateUpdateSessionPayload,
   validateAppUsagePayload,
   validateCreateSchedulePayload,
-  validateUpdateSchedulePayload };
+  validateUpdateSchedulePayload,
+  validateFriendRequestPayload,
+  validateUpdateFriendPayload };

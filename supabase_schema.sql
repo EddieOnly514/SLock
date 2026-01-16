@@ -105,6 +105,19 @@ CREATE TABLE daily_summaries (
 
 CREATE TYPE ACTIVITY_TYPE AS ENUM ('session_completed', 'session_override', 'streak_milestone', 'friend_joined');
 
+CREATE TABLE focus_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+  end_time TIMESTAMP WITH TIME ZONE,
+  scheduled_duration INTEGER,
+  actual_duration INTEGER,
+  status SESSION_STATUS DEFAULT 'active',
+  points_earned INTEGER DEFAULT 0,
+  tree_growth DECIMAL(5,2) DEFAULT 0.00,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 CREATE TABLE activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
@@ -161,18 +174,6 @@ CREATE TABLE app_schedules (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE focus_sessions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  start_time TIMESTAMP WITH TIME ZONE NOT NULL,
-  end_time TIMESTAMP WITH TIME ZONE,
-  scheduled_duration INTEGER,
-  actual_duration INTEGER,
-  status SESSION_STATUS DEFAULT 'active',
-  points_earned INTEGER DEFAULT 0,
-  tree_growth DECIMAL(5,2) DEFAULT 0.00,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
 
 CREATE TABLE focus_session_apps (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -233,6 +234,10 @@ ALTER TABLE app_schedules ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view their own user record"
 ON users FOR SELECT 
 USING (id = auth.uid());
+
+CREATE POLICY "Users can insert their own user record"
+ON users FOR INSERT 
+WITH CHECK (id = auth.uid());
 
 CREATE POLICY "Users can update their own user record"
 ON users FOR UPDATE 

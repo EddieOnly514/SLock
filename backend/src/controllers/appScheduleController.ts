@@ -40,7 +40,7 @@ async function createAppSchedule(req: Request, res: Response): Promise<Response>
 
         const { error: validationError, data: validationData } = validateCreateSchedulePayload(req.body);
 
-        if (validationError || !validationData ) {
+        if (validationError || !validationData) {
             return res.status(400).json({ error: validationError?.message ?? 'Error when validating app schedule payload' });
         }
 

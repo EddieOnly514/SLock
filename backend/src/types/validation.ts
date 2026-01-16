@@ -70,6 +70,14 @@ interface UpdateAppScheduleData {
   is_active?: boolean;
 }
 
+interface FriendRequestData {
+  friend_id: string;
+}
+
+interface UpdateFriendData {
+  status?: 'pending' | 'accepted' | 'blocked';
+}
+
 export type { 
   ValidationResult, 
   RegisterData, 
@@ -82,4 +90,6 @@ export type {
   UpdateFocusSessionData,
   AppUsageData,
   AppScheduleData,
-  UpdateAppScheduleData };
+  UpdateAppScheduleData,
+  FriendRequestData,
+  UpdateFriendData };
