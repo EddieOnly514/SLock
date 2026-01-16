@@ -120,7 +120,67 @@ async function getFriends(req: Request, res: Response): Promise<Response> {
 
 async function updateFriendRequest(req: Request, res: Response): Promise<Response> {
     try {
-        throw Error('Not Implemented')
+        const userData = req.user;
+
+        if (userData === undefined) {
+            return res.status(500).json({ error: 'Could not find User '});
+        }
+
+        const { error: validationError, data: validationData } = validateUpdateFriendPayload(req.body);
+
+        if (validationError || !validationData) {
+            return res.status(400).json({ error: validationError?.message ?? 'Error when validating update friend request payload' });
+        }
+
+        const { error: fetchedExistingFriendRequestError, data: existingFriendRequest } = await supabaseAdmin
+                                                        .from('friends')
+                                                        .select('*')
+                                                        .eq('id', req.params.id)
+                                                        .or(`user_id.eq.${userData.id},friend_id.eq.${userData.id}`)
+                                                        .single();
+
+        if (fetchedExistingFriendRequestError) {
+            throw fetchedExistingFriendRequestError;
+        }
+
+        if (!existingFriendRequest) {
+            return res.status(404).json({ error: 'Friend request not found' });
+        }
+
+        if (validationData.status === 'accepted') {
+            if (existingFriendRequest.friend_id !== userData.id) {
+                return res.status(403).json({ error: 'Only the recipient can accept a friend request' });
+            } 
+        }
+
+        if (validationData.status === 'pending') {
+            return res.status(400).json({ error: 'Cannot update status to pending' });
+        }
+
+
+        const { error: updateFriendRequestError } = await supabaseAdmin
+                                                        .from('friends')
+                                                        .update({status: validationData.status})
+                                                        .eq('id', req.params.id)
+                                                        .eq('user_id', existingFriendRequest.user_id)
+                                                        .eq('friend_id', existingFriendRequest.friend_id);
+
+        if (updateFriendRequestError) {
+            throw updateFriendRequestError;
+        }
+
+        // Fetch the updated friendship with friend's user info
+        const { error: fetchUpdatedFriendRequestError, data: updatedFriend } = await supabaseAdmin
+                                                        .from('friends')
+                                                        .select('*, users!friends_friend_id_fkey(id, username, email, avatar_url, created_at)')
+                                                        .eq('id', req.params.id)
+                                                        .single();
+
+        if (fetchUpdatedFriendRequestError || !updatedFriend) {
+            throw fetchUpdatedFriendRequestError || Error('Could not fetch friend');
+        }
+
+        return res.status(200).json({ friend: updatedFriend });
     } catch (error) {
         console.error('UPDATE FRIEND REQUEST ERROR: ', error);
         return res.status(500).json({ error: 'An unexpected server error has occured' });
