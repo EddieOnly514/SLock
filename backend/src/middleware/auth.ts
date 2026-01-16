@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { supabaseClient } from "../config/supabase";
+import { supabaseClient, supabaseAdmin } from "../config/supabase";
 import type { UserProfile } from "../types/user";
 
 type RequireAuthRequest = Request & { user?: UserProfile };
@@ -25,7 +25,7 @@ async function requireAuth(req: RequireAuthRequest, res: Response, next: NextFun
     const {
       data: profileData,
       error: profileError,
-    } = await supabaseClient.from("users").select("*").eq("id", userData.user.id).single();
+    } = await supabaseAdmin.from("users").select("*").eq("id", userData.user.id).single();
 
     if (profileError || !profileData) {
       return res.status(500).json({ error: profileError?.message ?? "Failed to load profile" });
