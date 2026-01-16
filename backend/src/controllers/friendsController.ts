@@ -52,10 +52,9 @@ async function sendFriendRequest(req: Request, res: Response): Promise<Response>
         // sql has a default of pending for the friends table
         const { error: createFriendRequesError, data: createdFriendRequest } = await supabaseAdmin.from('friends')
                                                         .insert({ user_id: userData.id, friend_id: validationData.friend_id })
-                                                        .select('id')
-                                                        .single();
+                                                        .select('*');
         
-        if (createFriendRequesError || !createdFriendRequest) {
+        if (createFriendRequesError || !createdFriendRequest || createdFriendRequest.length === 0) {
             throw createFriendRequesError || Error('Error when creating friend request');
         }
 
@@ -63,7 +62,7 @@ async function sendFriendRequest(req: Request, res: Response): Promise<Response>
         const { error: fetchCreatedFriendRequestError, data: friendRequestWithUser } = await supabaseAdmin
                                                         .from('friends')
                                                         .select('*, users!friends_friend_id_fkey(id, username, email, avatar_url, created_at)')
-                                                        .eq('id', createdFriendRequest.id)
+                                                        .eq('id', createdFriendRequest[0].id)
                                                         .single();
 
         if (fetchCreatedFriendRequestError || !friendRequestWithUser) {
@@ -85,27 +84,52 @@ async function getFriends(req: Request, res: Response): Promise<Response> {
             return res.status(500).json({ error: 'Could not find User '});
         }
 
-        let query = supabaseAdmin.from('friends')
+        // Query friendships where user is either sender or receiver
+        // We need to fetch differently based on direction to expand the correct "other" user
+        
+        let sentQuery = supabaseAdmin
+                        .from('friends')
                         .select('*, users!friends_friend_id_fkey(id, username, email, avatar_url, created_at)')
-                        .or(`user_id.eq.${userData.id},friend_id.eq.${userData.id}`);
+                        .eq('user_id', userData.id);
+        
+        let receivedQuery = supabaseAdmin
+                        .from('friends')
+                        .select('*, users!friends_user_id_fkey(id, username, email, avatar_url, created_at)')
+                        .eq('friend_id', userData.id);
 
+        // Apply status filter if provided
         if (req.query.status) {
-            query = query.eq('status', req.query.status);
+            sentQuery = sentQuery.eq('status', req.query.status);
+            receivedQuery = receivedQuery.eq('status', req.query.status);
         }
 
-        if (req.query.direction) {
-            if (req.query.direction === 'sent') {
-                query = query.eq('user_id', userData.id);
-            } else if (req.query.direction === 'received') {
-                query = query.eq('friend_id', userData.id);
-            }
+        // Apply direction filter / execute relevant queries
+        let friends: any[] = [];
+
+        if (req.query.direction === 'sent') {
+            const { error, data } = await sentQuery;
+            if (error) throw error;
+            friends = data || [];
+        } else if (req.query.direction === 'received') {
+             const { error, data } = await receivedQuery;
+             if (error) throw error;
+             friends = data || [];
+        } else {
+            // Get both
+            const [{ error: sentError, data: sentData }, { error: receivedError, data: receivedData }] = await Promise.all([
+                sentQuery,
+                receivedQuery
+            ]);
+            
+            if (sentError) throw sentError;
+            if (receivedError) throw receivedError;
+
+            friends = [...(sentData || []), ...(receivedData || [])];
         }
 
-        const { error: fetchFriendsError, data: fetchedFriends } = await query;
-
-        if (fetchFriendsError) {
-            throw fetchFriendsError;
-        }
+        // const { error: fetchFriendsError, data: fetchedFriends } = await query;
+        // if (fetchFriendsError) throw fetchFriendsError;
+        const fetchedFriends = friends;
 
         if (!fetchedFriends || fetchedFriends.length === 0) {
             return res.status(200).json({ friends: [] });
@@ -169,12 +193,11 @@ async function updateFriendRequest(req: Request, res: Response): Promise<Respons
             throw updateFriendRequestError;
         }
 
-        // Fetch the updated friendship with friend's user info
         const { error: fetchUpdatedFriendRequestError, data: updatedFriend } = await supabaseAdmin
-                                                        .from('friends')
-                                                        .select('*, users!friends_friend_id_fkey(id, username, email, avatar_url, created_at)')
-                                                        .eq('id', req.params.id)
-                                                        .single();
+                                                                                .from('friends')
+                                                                                .select('*, users!friends_friend_id_fkey(id, username, email, avatar_url, created_at)')
+                                                                                .eq('id', req.params.id)
+                                                                                .single();
 
         if (fetchUpdatedFriendRequestError || !updatedFriend) {
             throw fetchUpdatedFriendRequestError || Error('Could not fetch friend');
@@ -189,7 +212,30 @@ async function updateFriendRequest(req: Request, res: Response): Promise<Respons
 
 async function deleteFriendRequest(req: Request, res: Response): Promise<Response> {
     try {
-        throw Error('Not Implemented')
+        const userData = req.user;
+
+        if (userData === undefined) {
+            return res.status(500).json({ error: 'Could not find User '});
+        }
+
+        const { error: fetchExistingFriendRequestError, data: existingFriendRequest } = await supabaseAdmin.from('friends').select('*')
+                                                                    .eq('id', req.params.id).or(`user_id.eq.${userData.id},friend_id.eq.${userData.id}`).single();
+        
+        if (fetchExistingFriendRequestError) {
+            throw fetchExistingFriendRequestError;
+        }
+
+        if (!existingFriendRequest) {
+            return res.status(404).json({ error: 'Friend request not found' });
+        }
+
+        const { error: deleteFriendRequestError } = await supabaseAdmin.from('friends').delete().eq('id', req.params.id);
+
+        if (deleteFriendRequestError) {
+            throw deleteFriendRequestError;
+        }
+
+        return res.status(200).json({ message: 'friend request deleted succesfully!'})
     } catch (error) {
         console.error('DELETE FRIEND REQUEST ERROR: ', error);
         return res.status(500).json({ error: 'An unexpected server error has occured' });
