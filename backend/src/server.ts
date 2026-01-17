@@ -11,6 +11,7 @@ import focusSessionRoutes from "./routes/focusSessions";
 import appUsageRoutes from "./routes/appUsage";
 import appScheduleRoutes from "./routes/appSchedule";
 import friendsRoutes from "./routes/friends";
+import activitiesRoutes from "./routes/activities";
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -26,6 +27,7 @@ app.use('/api/focus-sessions', focusSessionRoutes);
 app.use('/api/app-usage', appUsageRoutes);
 app.use('/api/app-schedules', appScheduleRoutes);
 app.use('/api/friends', friendsRoutes);
+app.use('/api/activities', activitiesRoutes);
 
 app.listen(port, () => {
   console.log(`Server is listening on PORT: ${port}`);

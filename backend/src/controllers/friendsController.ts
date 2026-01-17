@@ -49,7 +49,6 @@ async function sendFriendRequest(req: Request, res: Response): Promise<Response>
             }
         } 
 
-        // sql has a default of pending for the friends table
         const { error: createFriendRequesError, data: createdFriendRequest } = await supabaseAdmin.from('friends')
                                                         .insert({ user_id: userData.id, friend_id: validationData.friend_id })
                                                         .select('*');
@@ -58,7 +57,6 @@ async function sendFriendRequest(req: Request, res: Response): Promise<Response>
             throw createFriendRequesError || Error('Error when creating friend request');
         }
 
-        // Fetch the created friendship with friend's user info
         const { error: fetchCreatedFriendRequestError, data: friendRequestWithUser } = await supabaseAdmin
                                                         .from('friends')
                                                         .select('*, users!friends_friend_id_fkey(id, username, email, avatar_url, created_at)')
@@ -84,9 +82,6 @@ async function getFriends(req: Request, res: Response): Promise<Response> {
             return res.status(500).json({ error: 'Could not find User '});
         }
 
-        // Query friendships where user is either sender or receiver
-        // We need to fetch differently based on direction to expand the correct "other" user
-        
         let sentQuery = supabaseAdmin
                         .from('friends')
                         .select('*, users!friends_friend_id_fkey(id, username, email, avatar_url, created_at)')
@@ -97,13 +92,11 @@ async function getFriends(req: Request, res: Response): Promise<Response> {
                         .select('*, users!friends_user_id_fkey(id, username, email, avatar_url, created_at)')
                         .eq('friend_id', userData.id);
 
-        // Apply status filter if provided
         if (req.query.status) {
             sentQuery = sentQuery.eq('status', req.query.status);
             receivedQuery = receivedQuery.eq('status', req.query.status);
         }
 
-        // Apply direction filter / execute relevant queries
         let friends: any[] = [];
 
         if (req.query.direction === 'sent') {
@@ -127,8 +120,6 @@ async function getFriends(req: Request, res: Response): Promise<Response> {
             friends = [...(sentData || []), ...(receivedData || [])];
         }
 
-        // const { error: fetchFriendsError, data: fetchedFriends } = await query;
-        // if (fetchFriendsError) throw fetchFriendsError;
         const fetchedFriends = friends;
 
         if (!fetchedFriends || fetchedFriends.length === 0) {
