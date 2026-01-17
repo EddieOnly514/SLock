@@ -78,6 +78,14 @@ interface UpdateFriendData {
   status?: 'pending' | 'accepted' | 'blocked';
 }
 
+interface ActivityData {
+  type: 'session_completed' | 'session_override' | 'streak_milestone' | 'friend_joined';
+  circle_id?: string;
+  session_id?: string;
+}
+
+//maybe add ActivityDataUpdate later
+
 export type { 
   ValidationResult, 
   RegisterData, 
@@ -92,4 +100,5 @@ export type {
   AppScheduleData,
   UpdateAppScheduleData,
   FriendRequestData,
-  UpdateFriendData };
+  UpdateFriendData,
+  ActivityData };

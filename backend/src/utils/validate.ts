@@ -12,9 +12,11 @@ import type {
   AppScheduleData,
   UpdateAppScheduleData, 
   FriendRequestData,
-  UpdateFriendData } from "../types/validation";
+  UpdateFriendData,
+  ActivityData } from "../types/validation";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 //TODO: can seperate concerns between email, username, and password to improve readability and reusablility.
 
@@ -567,7 +569,6 @@ function validateFriendRequestPayload(payload: Record<string, string>): Validati
     return { error: { message: 'friend_id must not be empty' }, data: null};
   }
 
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(friend_id)) {
     return { error: { message: 'friend_id must be a valid UUID' }, data: null};
   }
@@ -594,6 +595,63 @@ function validateUpdateFriendPayload(payload: Record<string, string>): Validatio
   return { data: { status: raw_status as 'pending' | 'accepted' | 'blocked' }, error: null};
 }
 
+function validateCreateActivityPayload(payload: Record<string, any>): ValidationResult<ActivityData> {
+  const raw_type = payload.type;
+  const raw_circle_id = payload.circle_id;
+  const raw_session_id = payload.session_id;
+
+  if (raw_type === undefined) {
+    return { error: { message: 'type must be provided'}, data: null };
+  }
+
+  if (typeof raw_type !== 'string') {
+    return { error: { message: 'type must be a string'}, data: null};
+  }
+
+  const validTypes = ['session_completed' , 'session_override' , 'streak_milestone' , 'friend_joined'];
+  if (!validTypes.includes(raw_type)) {
+    return { error: { message: 'type must be one of: session_completed, session_override, streak_milestone, friend_joined'}, data: null};
+  }
+
+  const createActivityPayload: ActivityData = { type: raw_type as 'session_completed' | 'session_override' | 'streak_milestone' | 'friend_joined' };
+
+  if (raw_circle_id !== undefined) {
+    if (typeof raw_circle_id !== 'string') {
+      return { error: { message: 'circle_id must be a string'}, data: null};
+    }
+  
+    const circle_id = raw_circle_id.trim();
+    if (!circle_id) {
+      return { error: { message: 'circle_id must not be empty' }, data: null};
+    }
+
+    if (!uuidRegex.test(circle_id)) {
+      return { error: { message: 'circle_id must be a valid UUID' }, data: null};
+    }
+
+    createActivityPayload.circle_id = circle_id;
+  }
+
+  if (raw_session_id !== undefined) {
+    if (typeof raw_session_id !== 'string') {
+      return { error: { message: 'session_id must be a string'}, data: null};
+    }
+    const session_id = raw_session_id.trim();
+    if (!session_id) {
+      return { error: { message: 'session_id must not be empty' }, data: null};
+    }
+
+    if (!uuidRegex.test(session_id)) {
+      return { error: { message: 'session_id must be a valid UUID' }, data: null};
+    }
+
+    createActivityPayload.session_id = session_id;
+  }
+  
+  return { data: createActivityPayload, error: null};
+}
+
+
 export { validateRegisterPayload, 
   validateLoginPayload, 
   validateRefreshPayload, 
@@ -606,4 +664,5 @@ export { validateRegisterPayload,
   validateCreateSchedulePayload,
   validateUpdateSchedulePayload,
   validateFriendRequestPayload,
-  validateUpdateFriendPayload };
+  validateUpdateFriendPayload,
+  validateCreateActivityPayload };
