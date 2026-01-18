@@ -13,7 +13,8 @@ import type {
   UpdateAppScheduleData, 
   FriendRequestData,
   UpdateFriendData,
-  ActivityData } from "../types/validation";
+  ActivityData,
+  GenerateDailySummaries } from "../types/validation";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -651,6 +652,40 @@ function validateCreateActivityPayload(payload: Record<string, any>): Validation
   return { data: createActivityPayload, error: null};
 }
 
+function validateGenerateDailySummaryPayload(payload: Record<string, any>): ValidationResult<GenerateDailySummaries> {
+  const raw_date = payload.date;
+
+  if (raw_date === undefined) {
+    return { data: {}, error: null };
+  }
+
+  if (typeof raw_date !== 'string') {
+    return { error: { message: 'date must be a string' }, data: null };
+  }
+
+  const date = raw_date.trim();
+
+  if (!date) {
+    return { error: { message: 'date must not be empty' }, data: null };
+  }
+
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(date)) {
+    return { error: { message: 'date must be in YYYY-MM-DD format' }, data: null };
+  }
+
+  const parsedDate = new Date(date + 'T00:00:00.000Z');
+  if (isNaN(parsedDate.getTime())) {
+    return { error: { message: 'date must be a valid date' }, data: null };
+  }
+
+  const [year, month, day] = date.split('-').map(Number);
+  if (parsedDate.getUTCFullYear() !== year || parsedDate.getUTCMonth() + 1 !== month || parsedDate.getUTCDate() !== day) {
+    return { error: { message: 'date must be a valid date' }, data: null };
+  }
+
+  return { data: { date }, error: null };
+}
 
 export { validateRegisterPayload, 
   validateLoginPayload, 
@@ -665,4 +700,5 @@ export { validateRegisterPayload,
   validateUpdateSchedulePayload,
   validateFriendRequestPayload,
   validateUpdateFriendPayload,
-  validateCreateActivityPayload };
+  validateCreateActivityPayload,
+  validateGenerateDailySummaryPayload };
