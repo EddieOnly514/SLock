@@ -57,6 +57,61 @@ async function generateOrUpdateDailySummary(req: Request, res: Response): Promis
             return res.status(500).json({ error: 'Could not find User' });
         }
 
+        const { error: validationError, data: validationData } = validateGenerateDailySummaryPayload(req.body);
+
+        if (validationError) {
+            return res.status(400).json({ error: validationError?.message ?? 'Error when validating daily summary payload' });
+        }
+
+        const today = new Date();
+        const date = validationData?.date || today.toISOString().split('T')[0];
+
+        const { error: fetchUsageRecordsError, data: usageRecords } = await supabaseAdmin.from('app_usage')
+                                                                .select('*, tracked_apps(*)')
+                                                                .eq('user_id', userData.id)
+                                                                .eq('date', date);
+        
+        if (fetchUsageRecordsError) {
+            throw fetchUsageRecordsError;
+        }
+
+        if (!usageRecords) {
+            return res.status(500).json({ error: 'Error fetching app usage records' });
+        }
+
+        let total_minutes = 0;
+        const per_app_data: Record<string, { duration_minutes: number; sessions_count: number; app_name?: string }> = {};
+
+        for (let i = 0; i < usageRecords.length; i++) {
+            const record = usageRecords[i];
+            const duration = record.duration_minutes || 0;
+            const sessions = record.sessions_count || 0;
+            
+            total_minutes += duration;
+
+            const trackedApp = record.tracked_apps;
+            per_app_data[record.app_id] = {
+                duration_minutes: duration,
+                sessions_count: sessions,
+                app_name: trackedApp?.name || undefined
+            };
+        }
+
+        const { error: upsertError, data: dailySummary } = await supabaseAdmin.from('daily_summaries')
+                                                                .upsert({
+                                                                    user_id: userData.id,
+                                                                    date: date,
+                                                                    total_minutes: total_minutes,
+                                                                    per_app_data: per_app_data
+                                                                }, { onConflict: 'user_id,date' })
+                                                                .select()
+                                                                .single();
+
+        if (upsertError || !dailySummary) {
+            throw upsertError || Error('Error when upserting daily summary');
+        }
+
+        return res.status(200).json({ daily_summary: dailySummary });
     } catch (error) {
         console.error('GENERATE OR UPDATE DAILY SUMMARY ERROR: ', error);
         return res.status(500).json({ error: GENERIC_SERVER_ERROR });
