@@ -86,6 +86,10 @@ interface ActivityData {
 
 //maybe add ActivityDataUpdate later
 
+interface GenerateDailySummaries {
+  date?: string;
+}
+
 export type { 
   ValidationResult, 
   RegisterData, 
@@ -101,4 +105,5 @@ export type {
   UpdateAppScheduleData,
   FriendRequestData,
   UpdateFriendData,
-  ActivityData };
+  ActivityData,
+  GenerateDailySummaries };
