@@ -15,16 +15,10 @@ export default function Index() {
   // const { user, isLoading, isOnboarded } = useAuth();
 
   useEffect(() => {
-    // TEMPORARY: Skip auth and go directly to main app
+    // Route to onboarding flow
     setTimeout(() => {
-      router.replace('/(tabs)/lock');
+      router.replace('/onboarding/quiz-intro');
     }, 500);
-
-    /* ORIGINAL AUTH LOGIC - Uncomment to re-enable:
-    if (!isLoading) {
-      checkAuthState();
-    }
-    */
   }, []);
 
   /* ORIGINAL checkAuthState function - Uncomment to re-enable:

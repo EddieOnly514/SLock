@@ -3,23 +3,23 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  TouchableOpacity,
+  Pressable,
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/Colors';
-import Theme from '../../constants/Theme';
+import AnimatedBackground from '../../components/onboarding/AnimatedBackground';
 
 interface Friend {
   id: string;
   username: string;
   treeHeight: number;
-  screenTime: number; // minutes
+  screenTime: number;
   streak: number;
 }
 
-// Mock data
 const MOCK_FRIENDS: Friend[] = [
   { id: '1', username: 'sarah_m', treeHeight: 85, screenTime: 120, streak: 7 },
   { id: '2', username: 'mike_k', treeHeight: 72, screenTime: 180, streak: 5 },
@@ -34,6 +34,14 @@ const MY_DATA: Friend = {
   streak: 6,
 };
 
+// Rank icons
+const getRankIcon = (index: number) => {
+  if (index === 0) return <Ionicons name="trophy" size={22} color="#FFD700" />;
+  if (index === 1) return <Ionicons name="medal" size={22} color="#C0C0C0" />;
+  if (index === 2) return <Ionicons name="medal-outline" size={22} color="#CD7F32" />;
+  return <Text style={styles.rankNumber}>#{index + 1}</Text>;
+};
+
 export default function SocialScreen() {
   const allUsers = [MY_DATA, ...MOCK_FRIENDS].sort(
     (a, b) => b.treeHeight - a.treeHeight
@@ -41,17 +49,16 @@ export default function SocialScreen() {
 
   const renderFriendCard = ({ item, index }: { item: Friend; index: number }) => {
     const isMe = item.username === 'you';
-    const rankEmoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
 
     return (
       <View style={[styles.friendCard, isMe && styles.myCard]}>
         <View style={styles.rankContainer}>
-          <Text style={styles.rankEmoji}>{rankEmoji || `#${index + 1}`}</Text>
+          {getRankIcon(index)}
         </View>
 
         <View style={styles.treeContainer}>
           <View style={[styles.tree, { height: item.treeHeight }]}>
-            <Text style={styles.treeIcon}>🌳</Text>
+            <Ionicons name="leaf" size={32} color={Colors.spec.emerald600} />
           </View>
           <Text style={styles.treeHeight}>{item.treeHeight}%</Text>
         </View>
@@ -70,7 +77,10 @@ export default function SocialScreen() {
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>Streak</Text>
-              <Text style={styles.statValue}>{item.streak} 🔥</Text>
+              <View style={styles.streakRow}>
+                <Text style={styles.statValue}>{item.streak}</Text>
+                <Ionicons name="flame" size={14} color="#F97316" />
+              </View>
             </View>
           </View>
         </View>
@@ -79,59 +89,80 @@ export default function SocialScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>SLock</Text>
-          <TouchableOpacity style={styles.addButton}>
-            <Text style={styles.addButtonText}>+ Add Friends</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Main Stats Card */}
-        <View style={styles.mainStatsCard}>
-          <Text style={styles.mainStatsTitle}>Your Progress Today</Text>
-          <View style={styles.mainStatsRow}>
-            <View style={styles.mainStat}>
-              <Text style={styles.mainStatValue}>{MY_DATA.screenTime}m</Text>
-              <Text style={styles.mainStatLabel}>Screen Time</Text>
-            </View>
-            <View style={styles.mainStat}>
-              <Text style={styles.mainStatValue}>{MY_DATA.treeHeight}%</Text>
-              <Text style={styles.mainStatLabel}>Tree Growth</Text>
-            </View>
-            <View style={styles.mainStat}>
-              <Text style={styles.mainStatValue}>{MY_DATA.streak} 🔥</Text>
-              <Text style={styles.mainStatLabel}>Day Streak</Text>
-            </View>
+    <AnimatedBackground>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>SLock</Text>
+            <Pressable style={styles.addButton}>
+              <LinearGradient
+                colors={[Colors.primary[500], Colors.primary[600]]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.addButtonGradient}
+              >
+                <Ionicons name="person-add" size={16} color="#FFFFFF" />
+                <Text style={styles.addButtonText}>Add Friends</Text>
+              </LinearGradient>
+            </Pressable>
           </View>
-        </View>
 
-        {/* Leaderboard */}
-        <View style={styles.leaderboardHeader}>
-          <Text style={styles.leaderboardTitle}>Leaderboard</Text>
-          <Text style={styles.leaderboardSubtitle}>
-            Compare trees with friends
-          </Text>
-        </View>
+          {/* Main Stats Card */}
+          <View style={styles.mainStatsCard}>
+            <LinearGradient
+              colors={[Colors.primary[500], Colors.primary[600]]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.statsCardGradient}
+            >
+              <Text style={styles.mainStatsTitle}>Your Progress Today</Text>
+              <View style={styles.mainStatsRow}>
+                <View style={styles.mainStat}>
+                  <Text style={styles.mainStatValue}>{MY_DATA.screenTime}m</Text>
+                  <Text style={styles.mainStatLabel}>Screen Time</Text>
+                </View>
+                <View style={styles.statDividerVertical} />
+                <View style={styles.mainStat}>
+                  <Text style={styles.mainStatValue}>{MY_DATA.treeHeight}%</Text>
+                  <Text style={styles.mainStatLabel}>Tree Growth</Text>
+                </View>
+                <View style={styles.statDividerVertical} />
+                <View style={styles.mainStat}>
+                  <View style={styles.streakRowMain}>
+                    <Text style={styles.mainStatValue}>{MY_DATA.streak}</Text>
+                    <Ionicons name="flame" size={18} color="#FFFFFF" />
+                  </View>
+                  <Text style={styles.mainStatLabel}>Day Streak</Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </View>
 
-        <FlatList
-          data={allUsers}
-          renderItem={renderFriendCard}
-          keyExtractor={(item) => item.id || 'me'}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
-    </SafeAreaView>
+          {/* Leaderboard */}
+          <View style={styles.leaderboardHeader}>
+            <Text style={styles.leaderboardTitle}>Leaderboard</Text>
+            <Text style={styles.leaderboardSubtitle}>
+              Compare trees with{'\u00A0'}friends
+            </Text>
+          </View>
+
+          <FlatList
+            data={allUsers}
+            renderItem={renderFriendCard}
+            keyExtractor={(item) => item.id || 'me'}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      </SafeAreaView>
+    </AnimatedBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.primary,
   },
   content: {
     flex: 1,
@@ -140,124 +171,149 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Theme.spacing.lg,
-    paddingVertical: Theme.spacing.md,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
   title: {
-    fontSize: Theme.fontSize.xxl,
-    fontWeight: Theme.fontWeight.bold,
-    color: Colors.primary[500],
+    fontSize: 32,
+    fontWeight: '700',
+    color: Colors.spec.blue600,
   },
   addButton: {
-    backgroundColor: Colors.primary[500],
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Theme.spacing.sm,
-    borderRadius: Theme.borderRadius.lg,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  addButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   addButtonText: {
-    color: Colors.neutral.white,
-    fontSize: Theme.fontSize.sm,
-    fontWeight: Theme.fontWeight.semibold,
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   mainStatsCard: {
-    backgroundColor: Colors.neutral.white,
-    marginHorizontal: Theme.spacing.lg,
-    marginBottom: Theme.spacing.lg,
-    padding: Theme.spacing.lg,
-    borderRadius: Theme.borderRadius.xl,
-    ...Theme.shadow.md,
+    marginHorizontal: 24,
+    marginBottom: 24,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: Colors.spec.blue500,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  statsCardGradient: {
+    padding: 20,
   },
   mainStatsTitle: {
-    fontSize: Theme.fontSize.md,
-    fontWeight: Theme.fontWeight.semibold,
-    color: Colors.text.primary,
-    marginBottom: Theme.spacing.md,
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   mainStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    alignItems: 'center',
   },
   mainStat: {
     alignItems: 'center',
+    flex: 1,
   },
   mainStatValue: {
-    fontSize: Theme.fontSize.xl,
-    fontWeight: Theme.fontWeight.bold,
-    color: Colors.primary[500],
-    marginBottom: Theme.spacing.xs,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
   },
   mainStatLabel: {
-    fontSize: Theme.fontSize.xs,
-    color: Colors.text.tertiary,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  streakRowMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  statDividerVertical: {
+    width: 1,
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.3)',
   },
   leaderboardHeader: {
-    paddingHorizontal: Theme.spacing.lg,
-    marginBottom: Theme.spacing.md,
+    paddingHorizontal: 24,
+    marginBottom: 16,
   },
   leaderboardTitle: {
-    fontSize: Theme.fontSize.lg,
-    fontWeight: Theme.fontWeight.bold,
-    color: Colors.text.primary,
-    marginBottom: Theme.spacing.xs,
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.spec.gray900,
+    marginBottom: 4,
   },
   leaderboardSubtitle: {
-    fontSize: Theme.fontSize.sm,
-    color: Colors.text.tertiary,
+    fontSize: 14,
+    color: Colors.spec.gray600,
   },
   listContent: {
-    paddingHorizontal: Theme.spacing.lg,
-    paddingBottom: Theme.spacing.xl,
+    paddingHorizontal: 24,
+    paddingBottom: 100,
   },
   friendCard: {
     flexDirection: 'row',
-    backgroundColor: Colors.neutral.white,
-    borderRadius: Theme.borderRadius.xl,
-    padding: Theme.spacing.md,
-    marginBottom: Theme.spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
     alignItems: 'center',
-    ...Theme.shadow.sm,
+    borderWidth: 1,
+    borderColor: Colors.spec.gray200,
   },
   myCard: {
     borderWidth: 2,
-    borderColor: Colors.primary[500],
-    backgroundColor: Colors.primary[50],
+    borderColor: Colors.spec.blue500,
+    backgroundColor: Colors.spec.blue50,
   },
   rankContainer: {
-    width: 40,
+    width: 36,
     alignItems: 'center',
   },
-  rankEmoji: {
-    fontSize: Theme.fontSize.xl,
+  rankNumber: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.spec.gray500,
   },
   treeContainer: {
     alignItems: 'center',
-    marginRight: Theme.spacing.md,
+    marginRight: 16,
   },
   tree: {
-    width: 60,
+    width: 50,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    marginBottom: Theme.spacing.xs,
-  },
-  treeIcon: {
-    fontSize: 40,
+    marginBottom: 4,
   },
   treeHeight: {
-    fontSize: Theme.fontSize.sm,
-    fontWeight: Theme.fontWeight.semibold,
-    color: Colors.success[600],
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.spec.emerald600,
   },
   friendInfo: {
     flex: 1,
   },
   username: {
-    fontSize: Theme.fontSize.md,
-    fontWeight: Theme.fontWeight.semibold,
-    color: Colors.text.primary,
-    marginBottom: Theme.spacing.sm,
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.spec.gray900,
+    marginBottom: 8,
   },
   myUsername: {
-    color: Colors.primary[600],
+    color: Colors.spec.blue600,
   },
   stats: {
     flexDirection: 'row',
@@ -267,19 +323,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statLabel: {
-    fontSize: Theme.fontSize.xs,
-    color: Colors.text.tertiary,
+    fontSize: 11,
+    color: Colors.spec.gray500,
     marginBottom: 2,
   },
   statValue: {
-    fontSize: Theme.fontSize.sm,
-    fontWeight: Theme.fontWeight.medium,
-    color: Colors.text.primary,
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.spec.gray900,
+  },
+  streakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   statDivider: {
     width: 1,
-    height: 30,
-    backgroundColor: Colors.border.light,
-    marginHorizontal: Theme.spacing.sm,
+    height: 28,
+    backgroundColor: Colors.spec.gray200,
+    marginHorizontal: 12,
   },
 });

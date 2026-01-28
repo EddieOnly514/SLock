@@ -1,232 +1,237 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
+  useSharedValue,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
+import { ANIMATION_THEME } from '../../constants/AnimationTheme';
 import AnimatedBackground from '../../components/onboarding/AnimatedBackground';
 import ProgressBar from '../../components/onboarding/ProgressBar';
 import { useOnboarding } from '../../hooks/useOnboarding';
 import Colors from '../../constants/Colors';
-
-type OnlineLevel = 'nope' | 'a_little' | 'pretty_much' | 'extremely' | 'i_live_online';
-
-const OPTIONS: Array<{
-  value: OnlineLevel;
-  emoji: string;
-  title: string;
-  subtext: string;
-  colors: string[];
-}> = [
-  {
-    value: 'nope',
-    emoji: '😌',
-    title: 'Nope',
-    subtext: 'I barely use my phone',
-    colors: Colors.onboarding.electricBlue,
-  },
-  {
-    value: 'a_little',
-    emoji: '🙂',
-    title: 'A Little',
-    subtext: 'I check my phone occasionally',
-    colors: Colors.onboarding.glowBlue,
-  },
-  {
-    value: 'pretty_much',
-    emoji: '😬',
-    title: 'Pretty Much',
-    subtext: "I'm on my phone a lot",
-    colors: ['#FFA500', '#FF8C00'],
-  },
-  {
-    value: 'extremely',
-    emoji: '😅',
-    title: 'Extremely',
-    subtext: 'My phone is always in my hand',
-    colors: Colors.onboarding.coralOrange,
-  },
-  {
-    value: 'i_live_online',
-    emoji: '🤯',
-    title: 'I Live Online',
-    subtext: 'Screen time? More like screen life',
-    colors: ['#FF0000', '#CC0000'],
-  },
-];
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function ChronicallyOnlineScreen() {
   const router = useRouter();
   const { data, updateData, setCurrentStep } = useOnboarding();
-  const [selected, setSelected] = useState<OnlineLevel | null>(
-    (data.chronicallyOnlineLevel as OnlineLevel) || null
+  const [selected, setSelected] = useState<boolean | null>(
+    data.isChronicallyOnline ?? null
   );
 
-  const handleSelect = (value: OnlineLevel) => {
+  const contentOpacity = useSharedValue(0);
+  const contentTranslateY = useSharedValue(20);
+  const yesScale = useSharedValue(1);
+  const noScale = useSharedValue(1);
+
+  React.useEffect(() => {
+    // 700ms Bezier Ease, no bounce
+    contentOpacity.value = withTiming(1, {
+      duration: ANIMATION_THEME.duration.slow,
+      easing: ANIMATION_THEME.eased
+    });
+    contentTranslateY.value = withTiming(0, {
+      duration: ANIMATION_THEME.duration.slow,
+      easing: ANIMATION_THEME.eased
+    });
+  }, []);
+
+  const contentStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+    transform: [{ translateY: contentTranslateY.value }],
+  }));
+
+  const yesStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: yesScale.value }],
+  }));
+
+  const noStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: noScale.value }],
+  }));
+
+  const handleSelect = (value: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelected(value);
-    updateData({ chronicallyOnlineLevel: value });
+    updateData({ isChronicallyOnline: value });
 
-    // Auto-advance after brief delay
+    // Auto-advance after selection
     setTimeout(() => {
       setCurrentStep(4);
       router.push('/onboarding/social-media-hours');
-    }, 400);
+    }, 500);
+  };
+
+  const handlePressIn = (scale: Animated.SharedValue<number>) => {
+    // Scale 0.98, timing only
+    scale.value = withTiming(0.98, {
+      duration: ANIMATION_THEME.duration.fast,
+      easing: ANIMATION_THEME.eased
+    });
+  };
+
+  const handlePressOut = (scale: Animated.SharedValue<number>) => {
+    scale.value = withTiming(1, {
+      duration: ANIMATION_THEME.duration.fast,
+      easing: ANIMATION_THEME.eased
+    });
   };
 
   return (
-    <AnimatedBackground variant="darkPurple">
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <ProgressBar currentStep={3} totalSteps={11} />
+    <AnimatedBackground>
+      <ProgressBar currentStep={3} totalSteps={11} />
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Question */}
-          <View style={styles.questionSection}>
-            <Text style={styles.emoji}>📱</Text>
-            <Text style={styles.question}>Are you chronically online?</Text>
-            <Text style={styles.subtext}>
-              Be honest - how much time do you spend scrolling?
-            </Text>
-          </View>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.spacer} />
 
-          {/* Options */}
-          <View style={styles.optionsSection}>
-            {OPTIONS.map((option) => (
-              <OptionCard
-                key={option.value}
-                option={option}
-                isSelected={selected === option.value}
-                onPress={() => handleSelect(option.value)}
-              />
-            ))}
+        <Animated.View style={[styles.content, contentStyle]}>
+          <Text style={styles.question}>
+            Are you chronically online?
+          </Text>
+
+          <Text style={styles.subtext}>
+            Be honest with{'\u00A0'}yourself
+          </Text>
+
+          <View style={styles.optionsContainer}>
+            <AnimatedPressable
+              onPress={() => handleSelect(true)}
+              onPressIn={() => handlePressIn(yesScale)}
+              onPressOut={() => handlePressOut(yesScale)}
+              style={[styles.optionWrapper, yesStyle]}
+            >
+              <View style={[
+                styles.optionCard,
+                selected === true && styles.optionCardSelectedYes
+              ]}>
+                <Text style={styles.optionTitle}>Yes</Text>
+                <Text style={styles.optionSubtext}>
+                  I spend way too much time on my{'\u00A0'}phone
+                </Text>
+                {selected === true && (
+                  <View style={styles.checkmarkContainer}>
+                    <View style={styles.checkmarkBlue}>
+                      <Ionicons name="checkmark" size={20} color="#FFFFFF" strokeWidth={3} />
+                    </View>
+                  </View>
+                )}
+              </View>
+            </AnimatedPressable>
+
+            <AnimatedPressable
+              onPress={() => handleSelect(false)}
+              onPressIn={() => handlePressIn(noScale)}
+              onPressOut={() => handlePressOut(noScale)}
+              style={[styles.optionWrapper, noStyle]}
+            >
+              <View style={[
+                styles.optionCard,
+                selected === false && styles.optionCardSelectedNo
+              ]}>
+                <Text style={styles.optionTitle}>No</Text>
+                <Text style={styles.optionSubtext}>
+                  I have decent control over my{'\u00A0'}usage
+                </Text>
+                {selected === false && (
+                  <View style={styles.checkmarkContainer}>
+                    <View style={styles.checkmarkGreen}>
+                      <Ionicons name="checkmark" size={20} color="#FFFFFF" strokeWidth={3} />
+                    </View>
+                  </View>
+                )}
+              </View>
+            </AnimatedPressable>
           </View>
-        </ScrollView>
+        </Animated.View>
       </SafeAreaView>
     </AnimatedBackground>
   );
 }
 
-interface OptionCardProps {
-  option: typeof OPTIONS[0];
-  isSelected: boolean;
-  onPress: () => void;
-}
-
-const OptionCard: React.FC<OptionCardProps> = ({ option, isSelected, onPress }) => {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.95, { damping: 15 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15 });
-  };
-
-  return (
-    <AnimatedPressable
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={[styles.optionWrapper, animatedStyle]}
-    >
-      <LinearGradient
-        colors={
-          isSelected
-            ? option.colors
-            : ['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0.05)']
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.option, isSelected && styles.optionSelected]}
-      >
-        <Text style={styles.optionEmoji}>{option.emoji}</Text>
-        <Text style={styles.optionTitle}>{option.title}</Text>
-        <Text style={styles.optionSubtext}>{option.subtext}</Text>
-      </LinearGradient>
-    </AnimatedPressable>
-  );
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
+  spacer: {
+    height: 100,
   },
-  scrollContent: {
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 24,
     paddingBottom: 40,
   },
-  questionSection: {
-    marginTop: 32,
-    marginBottom: 24,
-    gap: 16,
-    alignItems: 'center',
-  },
-  emoji: {
-    fontSize: 80,
-    marginBottom: 8,
-  },
   question: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.spec.gray900,
     textAlign: 'center',
-    lineHeight: 40,
+    marginBottom: 16,
   },
   subtext: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: Colors.spec.gray600,
     textAlign: 'center',
-    lineHeight: 24,
+    marginBottom: 48,
   },
-  optionsSection: {
-    gap: 14,
+  optionsContainer: {
+    width: '100%',
+    gap: 16,
   },
   optionWrapper: {
-    borderRadius: 20,
-    overflow: 'hidden',
+    width: '100%',
   },
-  option: {
-    padding: 24,
-    alignItems: 'center',
-    gap: 8,
+  optionCard: {
+    width: '100%',
+    padding: 32,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 20,
+    borderColor: Colors.spec.gray200,
+    position: 'relative',
   },
-  optionSelected: {
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    borderWidth: 3,
+  optionCardSelectedYes: {
+    borderColor: Colors.spec.blue500,
+    backgroundColor: Colors.spec.blue50,
   },
-  optionEmoji: {
-    fontSize: 48,
+  optionCardSelectedNo: {
+    borderColor: Colors.spec.emerald500,
+    backgroundColor: Colors.spec.emerald50,
   },
   optionTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.spec.gray900,
+    marginBottom: 8,
   },
   optionSubtext: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
+    fontSize: 14,
+    color: Colors.spec.gray600,
+  },
+  checkmarkContainer: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+  },
+  checkmarkBlue: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.spec.blue600,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkmarkGreen: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.spec.emerald600,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

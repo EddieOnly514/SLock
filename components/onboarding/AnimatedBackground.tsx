@@ -1,118 +1,88 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
   withTiming,
-  withDelay,
+  withSequence,
+  interpolate,
   Easing,
 } from 'react-native-reanimated';
 import Colors from '../../constants/Colors';
 
+const { width, height } = Dimensions.get('window');
+
 interface AnimatedBackgroundProps {
-  variant?: 'darkPurple' | 'darkBlue' | 'deepSpace';
   children?: React.ReactNode;
 }
 
-const FloatingParticle = ({ delay = 0, size = 4 }: { delay?: number; size?: number }) => {
-  const translateY = useSharedValue(0);
-  const opacity = useSharedValue(0.3);
-  const scale = useSharedValue(1);
+// Wave layer component with subtle breathing effect
+const WaveLayer = ({
+  delay,
+  duration,
+  translateRange,
+  scaleRange,
+  opacity: baseOpacity
+}: {
+  delay: number;
+  duration: number;
+  translateRange: number;
+  scaleRange: [number, number];
+  opacity: number;
+}) => {
+  const progress = useSharedValue(0);
 
   useEffect(() => {
-    translateY.value = withDelay(
-      delay,
-      withRepeat(
-        withTiming(-50, {
-          duration: 3000 + Math.random() * 2000,
-          easing: Easing.inOut(Easing.ease),
-        }),
-        -1,
-        true
-      )
-    );
-
-    opacity.value = withDelay(
-      delay,
-      withRepeat(
-        withTiming(0.8, {
-          duration: 2000 + Math.random() * 1000,
-          easing: Easing.inOut(Easing.ease),
-        }),
-        -1,
-        true
-      )
-    );
-
-    scale.value = withDelay(
-      delay,
-      withRepeat(
-        withTiming(1.5, {
-          duration: 2500 + Math.random() * 1500,
-          easing: Easing.inOut(Easing.ease),
-        }),
-        -1,
-        true
-      )
+    progress.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration, easing: Easing.inOut(Easing.sin) })
+      ),
+      -1,
+      false
     );
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }, { scale: scale.value }],
-    opacity: opacity.value,
+    transform: [
+      { translateY: interpolate(progress.value, [0, 1], [0, translateRange]) },
+      { scale: interpolate(progress.value, [0, 1], scaleRange) },
+    ],
+    opacity: interpolate(progress.value, [0, 0.5, 1], [baseOpacity, baseOpacity * 1.3, baseOpacity]),
   }));
 
   return (
-    <Animated.View
-      style={[
-        styles.particle,
-        {
-          width: size,
-          height: size,
-          left: `${Math.random() * 100}%`,
-          top: `${Math.random() * 100}%`,
-        },
-        animatedStyle,
-      ]}
-    />
+    <Animated.View style={[styles.waveLayer, animatedStyle]}>
+      <LinearGradient
+        colors={[Colors.primary.soft, 'rgba(255, 59, 59, 0.03)', 'transparent']}
+        style={styles.waveGradient}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
+    </Animated.View>
   );
 };
 
-export default function AnimatedBackground({
-  variant = 'darkPurple',
-  children,
-}: AnimatedBackgroundProps) {
-  const gradientColors = Colors.onboarding[variant];
-
-  // Generate particles with different delays
-  const particles = Array.from({ length: 20 }, (_, i) => ({
-    key: i,
-    delay: i * 100,
-    size: 2 + Math.random() * 4,
-  }));
-
+export default function AnimatedBackground({ children }: AnimatedBackgroundProps) {
   return (
     <View style={styles.container}>
+      {/* Base gradient - clean white */}
       <LinearGradient
-        colors={gradientColors}
-        style={styles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        {/* Floating particles */}
-        {particles.map((particle) => (
-          <FloatingParticle
-            key={particle.key}
-            delay={particle.delay}
-            size={particle.size}
-          />
-        ))}
+        colors={[Colors.background.primary, Colors.background.secondary, Colors.background.tertiary]}
+        style={styles.baseGradient}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
 
-        {/* Content */}
-        <View style={styles.content}>{children}</View>
-      </LinearGradient>
+      {/* Very subtle animated wave layers for depth */}
+      <WaveLayer delay={0} duration={4000} translateRange={-15} scaleRange={[1, 1.05]} opacity={0.08} />
+      <WaveLayer delay={1000} duration={5000} translateRange={-20} scaleRange={[1.02, 0.98]} opacity={0.05} />
+      <WaveLayer delay={2000} duration={6000} translateRange={-10} scaleRange={[0.98, 1.04]} opacity={0.03} />
+
+      {/* Content */}
+      <View style={styles.content}>{children}</View>
     </View>
   );
 }
@@ -120,16 +90,23 @@ export default function AnimatedBackground({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.background.primary,
   },
-  gradient: {
+  baseGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  waveLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: height * 0.5,
+  },
+  waveGradient: {
     flex: 1,
   },
   content: {
     flex: 1,
-  },
-  particle: {
-    position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    borderRadius: 999,
+    zIndex: 10,
   },
 });

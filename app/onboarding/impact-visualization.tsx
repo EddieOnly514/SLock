@@ -1,62 +1,75 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
+  useSharedValue,
   withDelay,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
+import { ANIMATION_THEME } from '../../constants/AnimationTheme';
 import AnimatedBackground from '../../components/onboarding/AnimatedBackground';
 import ProgressBar from '../../components/onboarding/ProgressBar';
 import { useOnboarding } from '../../hooks/useOnboarding';
 import Colors from '../../constants/Colors';
 
-// City pairs with approximate walking distances in km
-const CITY_PAIRS = [
-  { from: 'New York', to: 'Los Angeles', km: 4500 },
-  { from: 'Paris', to: 'Moscow', km: 2850 },
-  { from: 'Tokyo', to: 'Beijing', km: 2100 },
-  { from: 'London', to: 'Istanbul', km: 3200 },
-  { from: 'Sydney', to: 'Perth', km: 3300 },
-];
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function ImpactVisualizationScreen() {
   const router = useRouter();
   const { data, setCurrentStep } = useOnboarding();
-  const hoursPerWeek = data.socialMediaHours || 15;
+  const buttonScale = useSharedValue(1);
 
-  // Calculate impact statistics
-  const hoursPerYear = hoursPerWeek * 52;
-  const daysPerYear = Math.round(hoursPerYear / 24);
+  const hoursPerDay = data.socialMediaHours || 4;
+  const hoursPerYear = hoursPerDay * 365;
+  const booksCouldRead = Math.round(hoursPerYear / 8);
+  const daysWasted = Math.round(hoursPerYear / 24);
+  const exerciseHours = hoursPerYear;
 
-  // Love Story is 3:55 = 3.92 minutes
-  const loveStoryTimes = Math.floor(hoursPerYear * 60 / 3.92);
+  // Premium Animation Values
+  const contentOpacity = useSharedValue(0);
+  const contentTranslateY = useSharedValue(20);
+  const impactScale = useSharedValue(0.9);
+  const impactOpacity = useSharedValue(0);
+  const statsOpacity = useSharedValue(0);
 
-  // Marvel Cinematic Universe total runtime ~3000 minutes (50 hours)
-  const marvelTimes = Math.floor(hoursPerYear / 50);
+  React.useEffect(() => {
+    // Page Entry: 700ms duration, Bezier easing
+    const { eased, duration, stagger } = ANIMATION_THEME;
 
-  // Walking: Average person walks 5 km/hour
-  const totalWalkingKm = Math.round(hoursPerYear * 5);
+    // 1. Content (0ms)
+    contentOpacity.value = withTiming(1, { duration: duration.slow, easing: eased });
+    contentTranslateY.value = withTiming(0, { duration: duration.slow, easing: eased });
 
-  // Find a city pair that matches best
-  const cityPair = CITY_PAIRS.find(pair => pair.km <= totalWalkingKm) || CITY_PAIRS[CITY_PAIRS.length - 1];
-  const walkingTimes = Math.floor(totalWalkingKm / cityPair.km);
+    // 2. Impact Card (200ms -> 2 * stagger)
+    impactOpacity.value = withDelay(stagger * 2, withTiming(1, { duration: duration.slow, easing: eased }));
+    // Subtle scale up, no bounce
+    impactScale.value = withDelay(stagger * 2, withTiming(1, { duration: duration.slow, easing: eased }));
 
-  const scale = useSharedValue(0);
-  const opacity = useSharedValue(0);
-
-  useEffect(() => {
-    scale.value = withDelay(200, withSpring(1, { damping: 15, stiffness: 90 }));
-    opacity.value = withDelay(200, withSpring(1));
+    // 3. Stats Grid (400ms -> 4 * stagger)
+    statsOpacity.value = withDelay(stagger * 4, withTiming(1, { duration: duration.slow, easing: eased }));
   }, []);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
+  const contentStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+    transform: [{ translateY: contentTranslateY.value }],
+  }));
+
+  const impactStyle = useAnimatedStyle(() => ({
+    opacity: impactOpacity.value,
+    transform: [{ scale: impactScale.value }],
+  }));
+
+  const statsStyle = useAnimatedStyle(() => ({
+    opacity: statsOpacity.value,
+  }));
+
+  const buttonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
   }));
 
   const handleContinue = () => {
@@ -65,118 +78,75 @@ export default function ImpactVisualizationScreen() {
     router.push('/onboarding/social-solution');
   };
 
-  // Use days if it's a bigger, more impactful number
-  const showDays = daysPerYear >= hoursPerYear;
-  const mainNumber = showDays ? daysPerYear : hoursPerYear;
-  const mainUnit = showDays ? 'days' : 'hours';
+  // Button Interaction: Subtle scale (0.98), no spring
+  const handlePressIn = () => {
+    buttonScale.value = withTiming(0.98, {
+      duration: ANIMATION_THEME.duration.fast,
+      easing: ANIMATION_THEME.eased
+    });
+  };
+
+  const handlePressOut = () => {
+    buttonScale.value = withTiming(1, {
+      duration: ANIMATION_THEME.duration.fast,
+      easing: ANIMATION_THEME.eased
+    });
+  };
+
+  const stats = [
+    { icon: 'book-outline' as const, value: booksCouldRead, label: 'Books you could read' },
+    { icon: 'calendar-outline' as const, value: daysWasted, label: 'Full days per year' },
+    { icon: 'fitness-outline' as const, value: `${exerciseHours}h`, label: 'Hours for exercise yearly' },
+  ];
 
   return (
-    <AnimatedBackground variant="darkPurple">
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <ProgressBar currentStep={5} totalSteps={11} />
+    <AnimatedBackground>
+      <ProgressBar currentStep={5} totalSteps={11} />
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.headerSection}>
-            <Text style={styles.headerText}>This time could cost you</Text>
-          </View>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.spacer} />
 
-          {/* Main impact number */}
-          <View style={styles.impactSection}>
-            <Animated.View style={[styles.impactCard, animatedStyle]}>
-              <Text style={styles.impactNumber}>
-                {mainNumber} {mainUnit}
-              </Text>
-              <Text style={styles.impactLabel}>a year</Text>
+        <Animated.View style={[styles.content, contentStyle]}>
+          <Text style={styles.title}>The Reality Check</Text>
+          <Text style={styles.subtext}>
+            At {hoursPerDay} hours per day, you're{'\u00A0'}losing...
+          </Text>
 
-              <View style={styles.illustration}>
-                <Text style={styles.illustrationEmoji}>😔</Text>
+          <Animated.View style={[styles.impactCard, impactStyle]}>
+            <Text style={styles.impactNumber}>{daysWasted}</Text>
+            <Text style={styles.impactLabel}>full days per year</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.statsContainer, statsStyle]}>
+            {stats.map((stat, index) => (
+              <View key={index} style={styles.statCard}>
+                <View style={styles.statIconContainer}>
+                  <Ionicons name={stat.icon} size={22} color="Colors.primary[500]" />
+                </View>
+                <View style={styles.statContent}>
+                  <Text style={styles.statValue}>{stat.value}</Text>
+                  <Text style={styles.statLabel}>{stat.label}</Text>
+                </View>
               </View>
-            </Animated.View>
-          </View>
+            ))}
+          </Animated.View>
 
-          {/* What you could do instead */}
-          <View style={styles.statsSection}>
-            <Text style={styles.statsIntro}>
-              That time equates to:
-            </Text>
-
-            <View style={styles.statsList}>
-              {/* Love Story */}
-              <View style={styles.statItem}>
-                <Text style={styles.statEmoji}>🎵</Text>
-                <Text style={styles.statText}>
-                  Listen to "Love Story" {' '}
-                  <Text style={styles.statHighlight}>
-                    {loveStoryTimes.toLocaleString()} times
-                  </Text>
-                </Text>
-              </View>
-
-              {/* Marvel Series */}
-              <View style={styles.statItem}>
-                <Text style={styles.statEmoji}>🎬</Text>
-                <Text style={styles.statText}>
-                  Watch the entire Marvel series {' '}
-                  <Text style={styles.statHighlight}>{marvelTimes} times</Text>
-                </Text>
-              </View>
-
-              {/* Walking */}
-              <View style={styles.statItem}>
-                <Text style={styles.statEmoji}>🚶</Text>
-                <Text style={styles.statText}>
-                  Walk from <Text style={styles.statHighlight}>{cityPair.from}</Text> to{' '}
-                  <Text style={styles.statHighlight}>{cityPair.to}</Text>
-                  {walkingTimes > 1 && (
-                    <Text style={styles.statHighlight}> {walkingTimes} times</Text>
-                  )}
-                </Text>
-              </View>
-
-              {/* Productive alternatives */}
-              <View style={styles.statItem}>
-                <Text style={styles.statEmoji}>💼</Text>
-                <Text style={styles.statText}>
-                  Start an <Text style={styles.statHighlight}>entire business from scratch</Text>
-                </Text>
-              </View>
-
-              <View style={styles.statItem}>
-                <Text style={styles.statEmoji}>📈</Text>
-                <Text style={styles.statText}>
-                  Learn how to <Text style={styles.statHighlight}>trade stocks</Text>
-                </Text>
-              </View>
-
-              <View style={styles.statItem}>
-                <Text style={styles.statEmoji}>🎓</Text>
-                <Text style={styles.statText}>
-                  Complete a{' '}
-                  <Text style={styles.statHighlight}>Harvard online business course</Text>
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Continue Button */}
-          <View style={styles.footer}>
-            <Pressable onPress={handleContinue} style={styles.buttonWrapper}>
-              <LinearGradient
-                colors={Colors.onboarding.coralOrange}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.button}
-              >
-                <Text style={styles.buttonText}>I want to change this</Text>
-              </LinearGradient>
-            </Pressable>
-          </View>
-        </ScrollView>
+          <AnimatedPressable
+            onPress={handleContinue}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            style={[styles.buttonWrapper, buttonStyle]}
+          >
+            <LinearGradient
+              colors={[Colors.primary[500], Colors.primary[600]]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.button}
+            >
+              <Text style={styles.buttonText}>I'm Ready to Change</Text>
+            </LinearGradient>
+          </AnimatedPressable>
+        </Animated.View>
       </SafeAreaView>
     </AnimatedBackground>
   );
@@ -186,104 +156,105 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
+  spacer: {
+    height: 100,
   },
-  scrollContent: {
+  content: {
+    flex: 1,
+    alignItems: 'center',
     paddingHorizontal: 24,
     paddingBottom: 40,
+    justifyContent: 'space-between',
   },
-  headerSection: {
-    marginTop: 32,
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: Colors.spec.gray900,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtext: {
+    fontSize: 16,
+    color: Colors.spec.gray600,
+    textAlign: 'center',
     marginBottom: 20,
   },
-  headerText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-  },
-  impactSection: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
   impactCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: Colors.spec.gray200,
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'center',
-    gap: 8,
+    marginBottom: 16,
   },
   impactNumber: {
     fontSize: 64,
-    fontWeight: '800',
-    color: '#FF6B6B',
-    textAlign: 'center',
-    lineHeight: 70,
+    fontWeight: '700',
+    color: Colors.primary[500],
+    marginBottom: 4,
   },
   impactLabel: {
-    fontSize: 20,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  illustration: {
-    marginTop: 16,
-  },
-  illustrationEmoji: {
-    fontSize: 100,
-  },
-  statsSection: {
-    gap: 20,
-  },
-  statsIntro: {
     fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
+    color: Colors.spec.gray900,
     textAlign: 'center',
-    lineHeight: 26,
-    fontWeight: '600',
   },
-  statsList: {
-    gap: 12,
+  statsContainer: {
+    width: '100%',
+    gap: 10,
+    marginBottom: 20,
   },
-  statItem: {
+  statCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.onboarding.cardGlass,
-    borderRadius: 16,
-    padding: 16,
-    gap: 16,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.spec.gray200,
+    borderRadius: 14,
+    padding: 14,
+    gap: 14,
   },
-  statEmoji: {
-    fontSize: 28,
-    width: 36,
-    textAlign: 'center',
+  statIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  statText: {
+  statContent: {
     flex: 1,
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
-    lineHeight: 22,
   },
-  statHighlight: {
+  statValue: {
+    fontSize: 22,
     fontWeight: '700',
-    color: '#FF8E53',
+    color: Colors.spec.gray900,
   },
-  footer: {
-    paddingVertical: 24,
+  statLabel: {
+    fontSize: 13,
+    color: Colors.spec.gray600,
   },
   buttonWrapper: {
+    width: '100%',
     borderRadius: 16,
     overflow: 'hidden',
+    shadowColor: Colors.primary[500],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   button: {
-    paddingVertical: 18,
-    paddingHorizontal: 48,
-    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
     alignItems: 'center',
+    borderRadius: 16,
   },
   buttonText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
 });

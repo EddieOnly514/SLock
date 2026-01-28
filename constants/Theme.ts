@@ -73,16 +73,24 @@ export const Theme = {
       shadowRadius: 10,
       elevation: 8,
     },
-    // Glow effects for wins and milestones
+    // Glow effects for urgency and rewards
     glow: {
-      shadowColor: '#00FFC6',
+      shadowColor: '#FF3B3B',   // Red glow for urgency/action
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.6,
       shadowRadius: 12,
       elevation: 10,
     },
+    glowAmber: {
+      shadowColor: '#FFC83D',   // Amber glow for rewards/milestones
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.6,
+      shadowRadius: 12,
+      elevation: 10,
+    },
+    // Legacy alias
     glowOrange: {
-      shadowColor: '#FF8A00',
+      shadowColor: '#FFC83D',
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.6,
       shadowRadius: 12,

@@ -4,158 +4,230 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  withTiming,
+  useSharedValue,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import Colors from '../../constants/Colors';
-import Theme from '../../constants/Theme';
-import ProgressPet from '../../components/ProgressPet';
-import StreakFlame from '../../components/StreakFlame';
+import AnimatedBackground from '../../components/onboarding/AnimatedBackground';
+
+interface GiftCard {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  pointsCost: number;
+  value: string;
+}
+
+const GIFT_CARDS: GiftCard[] = [
+  { id: '1', name: 'Amazon', icon: 'logo-amazon', color: '#FF9900', pointsCost: 500, value: '$5' },
+  { id: '2', name: 'Starbucks', icon: 'cafe', color: '#00704A', pointsCost: 300, value: '$3' },
+  { id: '3', name: 'Apple', icon: 'logo-apple', color: '#000000', pointsCost: 1000, value: '$10' },
+  { id: '4', name: 'Spotify', icon: 'musical-notes', color: '#1DB954', pointsCost: 500, value: '$5' },
+  { id: '5', name: 'Netflix', icon: 'film', color: '#E50914', pointsCost: 1000, value: '$10' },
+  { id: '6', name: 'DoorDash', icon: 'restaurant', color: '#FF3008', pointsCost: 500, value: '$5' },
+];
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function RewardsScreen() {
-  const [characterTheme, setCharacterTheme] = useState<'digitalCreature' | 'growingPlant' | 'miniAvatar' | 'energyCore'>('growingPlant');
-  const [level, setLevel] = useState(12);
-  const [progress, setProgress] = useState(65); // Progress to next level
+  const [points, setPoints] = useState(1250);
+  const [hoursLocked, setHoursLocked] = useState(12.5);
+
+  const handleRedeemCard = (card: GiftCard) => {
+    if (points >= card.pointsCost) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // TODO: Implement redemption flow
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  };
 
   return (
-    <LinearGradient
-      colors={Colors.gradient.background}
-      style={styles.container}
-    >
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <AnimatedBackground>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Rewards</Text>
-            <TouchableOpacity>
-              <Text style={styles.historyLink}>History →</Text>
-            </TouchableOpacity>
+            <Pressable style={styles.historyButton}>
+              <Text style={styles.historyText}>History</Text>
+              <Ionicons name="chevron-forward" size={16} color={Colors.spec.blue600} />
+            </Pressable>
           </View>
 
-          {/* Progress Pet Card */}
-          <View style={styles.petCard}>
-            <ProgressPet
-              progress={progress}
-              level={level}
-              theme={characterTheme}
-              animated
-            />
-            <Text style={styles.motto}>Lock in. Level up.</Text>
-          </View>
-
-          {/* Stats Grid */}
-          <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
-              <StreakFlame streak={6} size="medium" animated />
-              <Text style={styles.statLabel}>Day Streak</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statIcon}>⏱️</Text>
-              <Text style={styles.statValue}>24.5h</Text>
-              <Text style={styles.statLabel}>Total Focus</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statIcon}>🎯</Text>
-              <Text style={styles.statValue}>89%</Text>
-              <Text style={styles.statLabel}>Success Rate</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statIcon}>⭐</Text>
-              <Text style={styles.statValue}>2,590</Text>
-              <Text style={styles.statLabel}>Focus Score</Text>
-            </View>
-          </View>
-
-          {/* Achievements */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Achievements</Text>
-            <View style={styles.achievementsList}>
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementIcon}>🏆</Text>
-                <View style={styles.achievementInfo}>
-                  <Text style={styles.achievementTitle}>First Lock</Text>
-                  <Text style={styles.achievementDesc}>Complete your first focus session</Text>
+          {/* Points Card */}
+          <Animated.View entering={FadeInDown.duration(600).delay(100)}>
+            <View style={styles.pointsCard}>
+              <LinearGradient
+                colors={[Colors.primary[500], Colors.primary[600]]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.pointsCardGradient}
+              >
+                <View style={styles.pointsHeader}>
+                  <Text style={styles.pointsLabel}>Your Points</Text>
+                  <View style={styles.pointsBadge}>
+                    <Ionicons name="star" size={16} color="#FFD700" />
+                  </View>
                 </View>
-                <Text style={styles.achievementCheck}>✓</Text>
+                <Text style={styles.pointsValue}>{points.toLocaleString()}</Text>
+                <View style={styles.pointsFormula}>
+                  <View style={styles.formulaItem}>
+                    <Ionicons name="time" size={18} color="rgba(255,255,255,0.8)" />
+                    <Text style={styles.formulaText}>{hoursLocked}h locked</Text>
+                  </View>
+                  <Text style={styles.formulaEquals}>=</Text>
+                  <View style={styles.formulaItem}>
+                    <Ionicons name="flash" size={18} color="rgba(255,255,255,0.8)" />
+                    <Text style={styles.formulaText}>100 pts/hr</Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </View>
+          </Animated.View>
+
+          {/* How It Works */}
+          <Animated.View
+            entering={FadeInDown.duration(600).delay(200)}
+            style={styles.howItWorks}
+          >
+            <View style={styles.howCard}>
+              <View style={[styles.howIcon, { backgroundColor: Colors.spec.blue50 }]}>
+                <Ionicons name="lock-closed" size={20} color={Colors.spec.blue600} />
               </View>
-
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementIcon}>🔥</Text>
-                <View style={styles.achievementInfo}>
-                  <Text style={styles.achievementTitle}>Week Warrior</Text>
-                  <Text style={styles.achievementDesc}>Maintain a 7-day streak</Text>
-                </View>
-                <View style={styles.achievementProgress}>
-                  <Text style={styles.progressText}>6/7</Text>
-                </View>
-              </View>
-
-              <View style={styles.achievementCard}>
-                <Text style={styles.achievementIcon}>⚡</Text>
-                <View style={styles.achievementInfo}>
-                  <Text style={styles.achievementTitle}>Power Hour</Text>
-                  <Text style={styles.achievementDesc}>Focus for 1 hour straight</Text>
-                </View>
-                <Text style={styles.achievementCheck}>✓</Text>
-              </View>
-
-              <View style={[styles.achievementCard, styles.lockedCard]}>
-                <Text style={styles.achievementIcon}>👑</Text>
-                <View style={styles.achievementInfo}>
-                  <Text style={styles.achievementTitle}>Focus King</Text>
-                  <Text style={styles.achievementDesc}>Reach #1 on leaderboard</Text>
-                </View>
-                <Text style={styles.achievementLock}>🔒</Text>
+              <View style={styles.howInfo}>
+                <Text style={styles.howTitle}>Lock Apps</Text>
+                <Text style={styles.howDesc}>Stay focused</Text>
               </View>
             </View>
-          </View>
+            <Ionicons name="arrow-forward" size={20} color={Colors.spec.gray400} />
+            <View style={styles.howCard}>
+              <View style={[styles.howIcon, { backgroundColor: Colors.spec.emerald50 }]}>
+                <Ionicons name="time" size={20} color={Colors.spec.emerald600} />
+              </View>
+              <View style={styles.howInfo}>
+                <Text style={styles.howTitle}>Earn Points</Text>
+                <Text style={styles.howDesc}>100/hour</Text>
+              </View>
+            </View>
+            <Ionicons name="arrow-forward" size={20} color={Colors.spec.gray400} />
+            <View style={styles.howCard}>
+              <View style={[styles.howIcon, { backgroundColor: Colors.spec.orange50 }]}>
+                <Ionicons name="gift" size={20} color="#F97316" />
+              </View>
+              <View style={styles.howInfo}>
+                <Text style={styles.howTitle}>Get Rewards</Text>
+                <Text style={styles.howDesc}>Gift cards</Text>
+              </View>
+            </View>
+          </Animated.View>
 
-          {/* Character Theme */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Character Theme</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.themesScroll}
-            >
-              <TouchableOpacity
-                style={[styles.themeCard, characterTheme === 'growingPlant' && styles.themeActive]}
-                onPress={() => setCharacterTheme('growingPlant')}
+          {/* Gift Cards Section */}
+          <Animated.View
+            entering={FadeInDown.duration(600).delay(300)}
+            style={styles.giftCardsSection}
+          >
+            <Text style={styles.sectionTitle}>Gift Cards</Text>
+            <View style={styles.giftCardsGrid}>
+              {GIFT_CARDS.map((card) => {
+                const canRedeem = points >= card.pointsCost;
+                return (
+                  <Pressable
+                    key={card.id}
+                    onPress={() => handleRedeemCard(card)}
+                    style={[styles.giftCard, !canRedeem && styles.giftCardDisabled]}
+                  >
+                    <View style={[styles.giftCardIcon, { backgroundColor: card.color + '15' }]}>
+                      <Ionicons name={card.icon as any} size={28} color={card.color} />
+                    </View>
+                    <Text style={styles.giftCardName}>{card.name}</Text>
+                    <Text style={styles.giftCardValue}>{card.value}</Text>
+                    <View style={[
+                      styles.giftCardCost,
+                      canRedeem ? styles.giftCardCostActive : styles.giftCardCostInactive
+                    ]}>
+                      <Ionicons
+                        name="star"
+                        size={12}
+                        color={canRedeem ? Colors.spec.blue600 : Colors.spec.gray400}
+                      />
+                      <Text style={[
+                        styles.giftCardCostText,
+                        canRedeem ? styles.costTextActive : styles.costTextInactive
+                      ]}>
+                        {card.pointsCost}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Animated.View>
+
+          {/* Prizes Section */}
+          <Animated.View
+            entering={FadeInDown.duration(600).delay(400)}
+            style={styles.prizesSection}
+          >
+            <Text style={styles.sectionTitle}>Special Prizes</Text>
+            <View style={styles.prizeCard}>
+              <LinearGradient
+                colors={['#6366F1', '#8B5CF6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.prizeGradient}
               >
-                <Text style={styles.themeIcon}>🌳</Text>
-                <Text style={styles.themeName}>Growing Plant</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.themeCard, characterTheme === 'digitalCreature' && styles.themeActive]}
-                onPress={() => setCharacterTheme('digitalCreature')}
+                <View style={styles.prizeIconContainer}>
+                  <Ionicons name="headset" size={32} color="#FFFFFF" />
+                </View>
+                <View style={styles.prizeInfo}>
+                  <Text style={styles.prizeTitle}>AirPods Pro</Text>
+                  <Text style={styles.prizeDesc}>Enter the monthly draw</Text>
+                </View>
+                <View style={styles.prizePoints}>
+                  <Text style={styles.prizePointsValue}>5,000</Text>
+                  <Text style={styles.prizePointsLabel}>pts</Text>
+                </View>
+              </LinearGradient>
+            </View>
+
+            <View style={styles.prizeCard}>
+              <LinearGradient
+                colors={['#EC4899', '#F43F5E']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.prizeGradient}
               >
-                <Text style={styles.themeIcon}>🤖</Text>
-                <Text style={styles.themeName}>Digital Creature</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.themeCard, characterTheme === 'miniAvatar' && styles.themeActive]}
-                onPress={() => setCharacterTheme('miniAvatar')}
-              >
-                <Text style={styles.themeIcon}>👤</Text>
-                <Text style={styles.themeName}>Mini Avatar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.themeCard, styles.themeLocked]}
-                disabled
-              >
-                <Text style={styles.themeIcon}>⚡</Text>
-                <Text style={styles.themeName}>Energy Core</Text>
-                <Text style={styles.themeLockBadge}>Lvl 20</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
+                <View style={styles.prizeIconContainer}>
+                  <Ionicons name="ticket" size={32} color="#FFFFFF" />
+                </View>
+                <View style={styles.prizeInfo}>
+                  <Text style={styles.prizeTitle}>Concert Tickets</Text>
+                  <Text style={styles.prizeDesc}>Random artist giveaway</Text>
+                </View>
+                <View style={styles.prizePoints}>
+                  <Text style={styles.prizePointsValue}>10,000</Text>
+                  <Text style={styles.prizePointsLabel}>pts</Text>
+                </View>
+              </LinearGradient>
+            </View>
+          </Animated.View>
         </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
+    </AnimatedBackground>
   );
 }
 
@@ -163,169 +235,245 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  safeArea: {
-    flex: 1,
-  },
-  content: {
-    paddingBottom: Theme.spacing.xxl,
+  scrollContent: {
+    paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Theme.spacing.lg,
-    paddingVertical: Theme.spacing.md,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
   title: {
-    fontSize: Theme.fontSize.xxxl,
-    fontWeight: Theme.fontWeight.bold,
-    color: Colors.text.primary,
+    fontSize: 32,
+    fontWeight: '700',
+    color: Colors.spec.gray900,
   },
-  historyLink: {
-    fontSize: Theme.fontSize.sm,
-    color: Colors.primary[500],
-    fontWeight: Theme.fontWeight.semibold,
-  },
-  petCard: {
-    backgroundColor: Colors.background.tertiary,
-    marginHorizontal: Theme.spacing.lg,
-    marginBottom: Theme.spacing.lg,
-    padding: Theme.spacing.xl,
-    borderRadius: Theme.borderRadius.xxl,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border.subtle,
-  },
-  motto: {
-    fontSize: Theme.fontSize.sm,
-    color: Colors.text.tertiary,
-    fontStyle: 'italic',
-  },
-  statsGrid: {
+  historyButton: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: Theme.spacing.lg,
-    gap: Theme.spacing.md,
-    marginBottom: Theme.spacing.lg,
-  },
-  statCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: Colors.background.tertiary,
-    borderRadius: Theme.borderRadius.xl,
-    padding: Theme.spacing.md,
     alignItems: 'center',
+  },
+  historyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.spec.blue600,
+  },
+  // Points Card
+  pointsCard: {
+    marginHorizontal: 24,
+    marginBottom: 24,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: Colors.spec.blue500,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  pointsCardGradient: {
+    padding: 24,
+  },
+  pointsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pointsLabel: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  pointsBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pointsValue: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  pointsFormula: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+  },
+  formulaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  formulaText: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  formulaEquals: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.6)',
+    marginHorizontal: 12,
+  },
+  // How It Works
+  howItWorks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 24,
+    marginBottom: 32,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border.subtle,
+    borderColor: Colors.spec.gray200,
   },
-  statIcon: {
-    fontSize: Theme.fontSize.xxxl,
-    marginBottom: Theme.spacing.xs,
+  howCard: {
+    alignItems: 'center',
+    flex: 1,
   },
-  statValue: {
-    fontSize: Theme.fontSize.xl,
-    fontWeight: Theme.fontWeight.bold,
-    color: Colors.primary[500],
-    marginBottom: Theme.spacing.xs,
+  howIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  statLabel: {
-    fontSize: Theme.fontSize.xs,
-    color: Colors.text.tertiary,
-    textAlign: 'center',
+  howInfo: {
+    alignItems: 'center',
   },
-  section: {
-    paddingHorizontal: Theme.spacing.lg,
-    marginBottom: Theme.spacing.xl,
+  howTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.spec.gray900,
+  },
+  howDesc: {
+    fontSize: 10,
+    color: Colors.spec.gray500,
+  },
+  // Gift Cards
+  giftCardsSection: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: Theme.fontSize.xl,
-    fontWeight: Theme.fontWeight.bold,
-    color: Colors.text.primary,
-    marginBottom: Theme.spacing.md,
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.spec.gray900,
+    marginBottom: 16,
   },
-  achievementsList: {
-    gap: Theme.spacing.sm,
-  },
-  achievementCard: {
+  giftCardsGrid: {
     flexDirection: 'row',
-    backgroundColor: Colors.background.tertiary,
-    borderRadius: Theme.borderRadius.xl,
-    padding: Theme.spacing.md,
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  giftCard: {
+    width: '31%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border.subtle,
+    borderColor: Colors.spec.gray200,
   },
-  lockedCard: {
-    opacity: 0.5,
+  giftCardDisabled: {
+    opacity: 0.6,
   },
-  achievementIcon: {
-    fontSize: Theme.fontSize.xxxl,
-    marginRight: Theme.spacing.md,
+  giftCardIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  achievementInfo: {
-    flex: 1,
-  },
-  achievementTitle: {
-    fontSize: Theme.fontSize.md,
-    fontWeight: Theme.fontWeight.semibold,
-    color: Colors.text.primary,
+  giftCardName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.spec.gray900,
     marginBottom: 2,
   },
-  achievementDesc: {
-    fontSize: Theme.fontSize.xs,
-    color: Colors.text.tertiary,
+  giftCardValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.spec.gray700,
+    marginBottom: 8,
   },
-  achievementCheck: {
-    fontSize: Theme.fontSize.xl,
-    color: Colors.primary[500],
-  },
-  achievementLock: {
-    fontSize: Theme.fontSize.lg,
-  },
-  achievementProgress: {
-    backgroundColor: Colors.primary[500],
-    paddingHorizontal: Theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Theme.borderRadius.md,
-  },
-  progressText: {
-    fontSize: Theme.fontSize.xs,
-    fontWeight: Theme.fontWeight.bold,
-    color: Colors.text.inverse,
-  },
-  themesScroll: {
-    paddingRight: Theme.spacing.lg,
-    gap: Theme.spacing.md,
-  },
-  themeCard: {
-    backgroundColor: Colors.background.tertiary,
-    borderRadius: Theme.borderRadius.xl,
-    padding: Theme.spacing.md,
+  giftCardCost: {
+    flexDirection: 'row',
     alignItems: 'center',
-    minWidth: 100,
-    borderWidth: 1,
-    borderColor: Colors.border.subtle,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  themeActive: {
-    borderWidth: 2,
-    borderColor: Colors.primary[500],
-    ...Theme.shadow.glow,
+  giftCardCostActive: {
+    backgroundColor: Colors.spec.blue50,
   },
-  themeLocked: {
-    opacity: 0.5,
+  giftCardCostInactive: {
+    backgroundColor: Colors.spec.gray100,
   },
-  themeIcon: {
-    fontSize: 40,
-    marginBottom: Theme.spacing.xs,
+  giftCardCostText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
-  themeName: {
-    fontSize: Theme.fontSize.xs,
-    color: Colors.text.secondary,
-    textAlign: 'center',
+  costTextActive: {
+    color: Colors.spec.blue600,
   },
-  themeLockBadge: {
-    fontSize: Theme.fontSize.xs,
-    color: Colors.text.tertiary,
-    marginTop: 2,
+  costTextInactive: {
+    color: Colors.spec.gray500,
+  },
+  // Prizes
+  prizesSection: {
+    paddingHorizontal: 24,
+  },
+  prizeCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  prizeGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+  },
+  prizeIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  prizeInfo: {
+    flex: 1,
+  },
+  prizeTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  prizeDesc: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  prizePoints: {
+    alignItems: 'center',
+  },
+  prizePointsValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  prizePointsLabel: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
   },
 });

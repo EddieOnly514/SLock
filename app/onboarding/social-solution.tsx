@@ -3,115 +3,160 @@ import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useAnimatedStyle,
+  withTiming,
+  useSharedValue,
+  withDelay,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
+import { ANIMATION_THEME } from '../../constants/AnimationTheme';
 import AnimatedBackground from '../../components/onboarding/AnimatedBackground';
 import ProgressBar from '../../components/onboarding/ProgressBar';
-import { TooltipCard } from '../../components/onboarding/TooltipCard';
 import { useOnboarding } from '../../hooks/useOnboarding';
 import Colors from '../../constants/Colors';
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 const features = [
   {
-    emoji: '🎯',
-    title: 'Social Accountability',
-    description: 'Friends keep you on track',
-    elaboration: 'Connect with friends who share your goals. When you know someone else is watching your progress, you\'re 3x more likely to stick to your commitments. Your accountability partners will check in, celebrate wins, and help you stay focused.',
+    icon: 'people' as const,
+    title: 'Accountability Partners',
+    description: 'Connect with friends who keep you honest',
   },
   {
-    emoji: '🔥',
-    title: 'Friendly Competition',
-    description: 'Turn progress into a game',
-    elaboration: 'Climb the leaderboards and see how you stack up against friends. Earn streaks for consecutive focused days, unlock badges for milestones, and compete in weekly challenges. Make productivity addictive, not social media.',
+    icon: 'shield-checkmark' as const,
+    title: 'Social Pressure',
+    description: 'Your streak is visible to your circle',
   },
   {
-    emoji: '⚡',
-    title: 'Real-Time Motivation',
-    description: 'Get instant support when you need it',
-    elaboration: 'Struggling to stay off your phone? Send a quick SOS to your accountability group and get instant motivation. See when your friends are staying strong, and cheer them on. You\'re never alone in this journey.',
+    icon: 'trophy' as const,
+    title: 'Compete & Win',
+    description: 'Leaderboards and weekly challenges',
   },
   {
-    emoji: '🌟',
-    title: 'Collective Growth',
-    description: 'Achieve more together',
-    elaboration: 'Track your group\'s combined hours saved and watch the impact multiply. Unlock exclusive group challenges and rewards. When one person succeeds, everyone celebrates. Rise together, not alone.',
+    icon: 'flash' as const,
+    title: 'Real-time Alerts',
+    description: 'Friends get notified if you slip',
   },
 ];
 
 export default function SocialSolutionScreen() {
   const router = useRouter();
   const { setCurrentStep } = useOnboarding();
+  const buttonScale = useSharedValue(1);
+
+  const contentOpacity = useSharedValue(0);
+  const contentTranslateY = useSharedValue(20);
+
+  React.useEffect(() => {
+    // 700ms Bezier Ease, no bounce
+    contentOpacity.value = withTiming(1, {
+      duration: ANIMATION_THEME.duration.slow,
+      easing: ANIMATION_THEME.eased
+    });
+    contentTranslateY.value = withTiming(0, {
+      duration: ANIMATION_THEME.duration.slow,
+      easing: ANIMATION_THEME.eased
+    });
+  }, []);
+
+  const contentStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+    transform: [{ translateY: contentTranslateY.value }],
+  }));
+
+  const buttonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
+  }));
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setCurrentStep(7);
-    router.push('/onboarding/name');
+    router.push('/onboarding/personal-info');
+  };
+
+  const handlePressIn = () => {
+    // Scale 0.98, timing only
+    buttonScale.value = withTiming(0.98, {
+      duration: ANIMATION_THEME.duration.fast,
+      easing: ANIMATION_THEME.eased
+    });
+  };
+
+  const handlePressOut = () => {
+    buttonScale.value = withTiming(1, {
+      duration: ANIMATION_THEME.duration.fast,
+      easing: ANIMATION_THEME.eased
+    });
   };
 
   return (
-    <AnimatedBackground variant="deepSpace">
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <ProgressBar currentStep={6} totalSteps={11} />
+    <AnimatedBackground>
+      <ProgressBar currentStep={6} totalSteps={11} />
 
-        <View style={styles.content}>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-          >
-            {/* Header */}
-            <View style={styles.headerSection}>
-              <Text style={styles.headerEmoji}>✨</Text>
-              <Text style={styles.title}>How SLock Helps You</Text>
-              <Text style={styles.subtitle}>
-                Break free from distractions with the power of{'\n'}
-                <Text style={styles.subtitleHighlight}>social accountability</Text>
-              </Text>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.spacer} />
+
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View style={[styles.content, contentStyle]}>
+            <View style={styles.iconContainer}>
+              <LinearGradient
+                colors={Colors.spec.gradientIcon}
+                style={styles.iconGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Ionicons name="people" size={40} color="#FFFFFF" />
+              </LinearGradient>
             </View>
 
-            {/* Features with tap tooltips */}
-            <View style={styles.featuresSection}>
+            <Text style={styles.title}>The Social Solution</Text>
+            <Text style={styles.subtext}>Willpower alone isn't{'\u00A0'}enough</Text>
+
+            <View style={styles.successRateContainer}>
+              <Text style={styles.successRateNumber}>78%</Text>
+              <Text style={styles.successRateText}>success rate with{'\u00A0'}accountability</Text>
+            </View>
+
+            <View style={styles.featuresContainer}>
               {features.map((feature, index) => (
-                <TooltipCard
+                <Animated.View
                   key={index}
-                  emoji={feature.emoji}
-                  title={feature.title}
-                  description={feature.description}
-                  elaboration={feature.elaboration}
-                />
+                  style={styles.featureCard}
+                >
+                  <View style={styles.featureIconContainer}>
+                    <Ionicons name={feature.icon} size={24} color={Colors.spec.blue600} />
+                  </View>
+                  <View style={styles.featureContent}>
+                    <Text style={styles.featureTitle}>{feature.title}</Text>
+                    <Text style={styles.featureDescription}>{feature.description}</Text>
+                  </View>
+                </Animated.View>
               ))}
             </View>
 
-            {/* Stats badge */}
-            <View style={styles.statsBadge}>
+            <AnimatedPressable
+              onPress={handleContinue}
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+              style={[styles.buttonWrapper, buttonStyle]}
+            >
               <LinearGradient
-                colors={['rgba(107, 76, 230, 0.25)', 'rgba(157, 78, 221, 0.15)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.statsGradient}
-              >
-                <Text style={styles.statsNumber}>78%</Text>
-                <Text style={styles.statsText}>
-                  of users reduce screen time by{' '}
-                  <Text style={styles.statsHighlight}>3+ hours</Text> in the first week{'\n'}
-                  with social accountability
-                </Text>
-              </LinearGradient>
-            </View>
-          </ScrollView>
-
-          {/* Continue Button */}
-          <View style={styles.footer}>
-            <Pressable onPress={handleContinue} style={styles.buttonWrapper}>
-              <LinearGradient
-                colors={Colors.onboarding.vibrantPurple}
+                colors={Colors.spec.gradientButton}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.button}
               >
-                <Text style={styles.buttonText}>Let's Get Started</Text>
+                <Text style={styles.buttonText}>Continue</Text>
               </LinearGradient>
-            </Pressable>
-          </View>
-        </View>
+            </AnimatedPressable>
+          </Animated.View>
+        </ScrollView>
       </SafeAreaView>
     </AnimatedBackground>
   );
@@ -121,90 +166,113 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    flex: 1,
+  spacer: {
+    height: 100,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingBottom: 40,
   },
-  headerSection: {
+  content: {
+    flex: 1,
     alignItems: 'center',
-    marginTop: 32,
-    marginBottom: 32,
-    gap: 12,
   },
-  headerEmoji: {
-    fontSize: 72,
-  },
-  title: {
-    fontSize: 38,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 17,
-    color: 'rgba(255, 255, 255, 0.75)',
-    textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 12,
-  },
-  subtitleHighlight: {
-    fontWeight: '700',
-    color: '#9D4EDD',
-  },
-  featuresSection: {
+  iconContainer: {
     marginBottom: 24,
   },
-  statsBadge: {
+  iconGradient: {
+    width: 80,
+    height: 80,
     borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(157, 78, 221, 0.4)',
-  },
-  statsGradient: {
-    padding: 28,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
   },
-  statsNumber: {
-    fontSize: 64,
-    fontWeight: '800',
-    color: '#B794F6',
-    textShadowColor: 'rgba(157, 78, 221, 0.5)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 12,
-  },
-  statsText: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-    lineHeight: 22,
-    fontWeight: '500',
-  },
-  statsHighlight: {
+  title: {
+    fontSize: 30,
     fontWeight: '700',
-    color: '#B794F6',
+    color: Colors.spec.gray900,
+    textAlign: 'center',
+    marginBottom: 8,
   },
-  footer: {
-    paddingHorizontal: 24,
-    paddingVertical: 24,
+  subtext: {
+    fontSize: 16,
+    color: Colors.spec.gray600,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  successRateContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 32,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  successRateNumber: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: Colors.spec.blue600,
+  },
+  successRateText: {
+    fontSize: 18,
+    color: Colors.spec.gray600,
+    marginLeft: 8,
+  },
+  featuresContainer: {
+    width: '100%',
+    gap: 12,
+    marginBottom: 32,
+  },
+  featureCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: Colors.spec.gray200,
+    borderRadius: 16,
+    padding: 16,
+    gap: 16,
+  },
+  featureIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: Colors.spec.blue50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  featureContent: {
+    flex: 1,
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.spec.gray900,
+    marginBottom: 4,
+  },
+  featureDescription: {
+    fontSize: 14,
+    color: Colors.spec.gray600,
   },
   buttonWrapper: {
+    width: '100%',
     borderRadius: 16,
     overflow: 'hidden',
+    shadowColor: Colors.spec.blue500,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   button: {
-    paddingVertical: 18,
-    paddingHorizontal: 48,
-    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
     alignItems: 'center',
+    borderRadius: 16,
   },
   buttonText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
 });
