@@ -17,17 +17,13 @@ import Animated, {
     useSharedValue,
     withRepeat,
     withSequence,
-    FadeIn,
-    FadeInDown,
-    FadeOut,
+    Easing,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import Colors from '../../constants/Colors';
 import { Typography, FontFamily } from '../../constants/Typography';
 import { Spacing } from '../../constants/Spacing';
-import { BorderRadius, IconSize } from '../../constants/Layout';
 import AnimatedBackground from '../../components/onboarding/AnimatedBackground';
-import SLockLogo from '../../components/SLockLogo';
 
 // Mock apps data - ranked by screen time
 const AVAILABLE_APPS = [
@@ -41,6 +37,17 @@ const AVAILABLE_APPS = [
     { id: '8', name: 'Facebook', icon: 'logo-facebook', screenTime: 15, color: '#1877F2' },
 ];
 
+// Rotating messages for locked state
+const LOCK_MESSAGES = [
+    "Stay with it.",
+    "Don't break now.",
+    "You chose this.",
+    "Focus is power.",
+    "Keep going.",
+    "Almost there.",
+    "Discipline wins.",
+];
+
 interface SelectedApp {
     id: string;
     name: string;
@@ -50,12 +57,9 @@ interface SelectedApp {
     minutesSaved: number;
 }
 
-type ScreenState = 'empty' | 'selecting' | 'session';
+type ScreenState = 'empty' | 'session';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-// Breaks options
-const BREAKS_OPTIONS = [0, 1, 2, 3, 5, 10];
 
 export default function HomeScreen() {
     const [screenState, setScreenState] = useState<ScreenState>('empty');
@@ -63,24 +67,31 @@ export default function HomeScreen() {
     const [tempSelectedIds, setTempSelectedIds] = useState<string[]>([]);
     const [showAppPicker, setShowAppPicker] = useState(false);
     const [showBreaksModal, setShowBreaksModal] = useState(false);
+    const [showLockedApps, setShowLockedApps] = useState(false);
+    const [showEndConfirm, setShowEndConfirm] = useState(false);
+    const [showAppDetail, setShowAppDetail] = useState(false);
+    const [detailApp, setDetailApp] = useState<SelectedApp | null>(null);
     const [selectedBreaks, setSelectedBreaks] = useState(3);
+    const [breaksRemaining, setBreaksRemaining] = useState(3);
     const [sessionDuration, setSessionDuration] = useState(0); // seconds
-    const [screenTimeToday, setScreenTimeToday] = useState(0); // minutes
+    const [lockMessage, setLockMessage] = useState(LOCK_MESSAGES[0]);
 
     const buttonScale = useSharedValue(1);
-    const pulseOpacity = useSharedValue(0.3);
+    const mascotScale = useSharedValue(1);
 
-    // Pulse animation for main button
+    // Mascot breathing animation
     useEffect(() => {
-        pulseOpacity.value = withRepeat(
-            withSequence(
-                withTiming(0.6, { duration: 1200 }),
-                withTiming(0.3, { duration: 1200 })
-            ),
-            -1,
-            true
-        );
-    }, []);
+        if (screenState === 'session') {
+            mascotScale.value = withRepeat(
+                withSequence(
+                    withTiming(1.03, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+                    withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+                ),
+                -1,
+                true
+            );
+        }
+    }, [screenState]);
 
     // Session timer
     useEffect(() => {
@@ -88,24 +99,31 @@ export default function HomeScreen() {
         if (screenState === 'session') {
             interval = setInterval(() => {
                 setSessionDuration(prev => prev + 1);
-                // Update minutes saved for each app
                 setSelectedApps(prev => prev.map(app => ({
                     ...app,
                     minutesSaved: Math.floor((sessionDuration + 1) / 60)
                 })));
-                // Update total screen time saved
-                setScreenTimeToday(Math.floor((sessionDuration + 1) / 60));
             }, 1000);
         }
         return () => clearInterval(interval);
     }, [screenState, sessionDuration]);
 
+    // Rotate lock messages
+    useEffect(() => {
+        if (screenState !== 'session') return;
+        const interval = setInterval(() => {
+            const randomIndex = Math.floor(Math.random() * LOCK_MESSAGES.length);
+            setLockMessage(LOCK_MESSAGES[randomIndex]);
+        }, 6000);
+        return () => clearInterval(interval);
+    }, [screenState]);
+
     const buttonStyle = useAnimatedStyle(() => ({
         transform: [{ scale: buttonScale.value }],
     }));
 
-    const pulseStyle = useAnimatedStyle(() => ({
-        opacity: pulseOpacity.value,
+    const mascotStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: mascotScale.value }],
     }));
 
     const handlePressIn = () => {
@@ -130,7 +148,7 @@ export default function HomeScreen() {
         if (hrs > 0) {
             return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
     const handleChooseApp = () => {
@@ -148,25 +166,23 @@ export default function HomeScreen() {
         );
     };
 
-    // Step 1: Confirm app selection, show breaks modal
     const confirmAppSelection = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowAppPicker(false);
-        setSelectedBreaks(3); // Reset to default 3 breaks
+        setSelectedBreaks(3);
         setShowBreaksModal(true);
     };
 
-    // Step 2: Confirm breaks, start session
     const confirmBreaksSelection = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         const apps = AVAILABLE_APPS
             .filter(app => tempSelectedIds.includes(app.id))
             .map(app => ({ ...app, minutesSaved: 0 }));
 
-        // Merge with existing selectedApps (for adding more apps)
         const existingIds = selectedApps.map(a => a.id);
         const newApps = apps.filter(a => !existingIds.includes(a.id));
         setSelectedApps(prev => [...prev, ...newApps]);
+        setBreaksRemaining(selectedBreaks);
 
         setShowBreaksModal(false);
         setScreenState('session');
@@ -175,342 +191,515 @@ export default function HomeScreen() {
         }
     };
 
-    const handleEndSession = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const handleViewLockedApps = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setShowLockedApps(true);
+    };
+
+    const handleEndSessionPress = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        setShowEndConfirm(true);
+    };
+
+    const confirmEndSession = () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        setShowEndConfirm(false);
         setScreenState('empty');
         setSelectedApps([]);
         setSessionDuration(0);
     };
 
-    const handleAddMoreApps = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setTempSelectedIds([]);
-        setShowAppPicker(true);
-    };
-
     return (
-        <AnimatedBackground>
-            <SafeAreaView style={styles.container} edges={['top']}>
-                {/* Header - SLock text */}
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>
-                        <Text style={{ color: Colors.primary[500] }}>S</Text>
-                        <Text style={{ color: Colors.text.primary }}>Lock</Text>
-                    </Text>
+        <View style={styles.container}>
+            {/* Different backgrounds for different states */}
+            {screenState === 'empty' ? (
+                <AnimatedBackground>
+                    <SafeAreaView style={styles.safeArea} edges={['top']}>
+                        {/* Header */}
+                        <View style={styles.header}>
+                            <Text style={styles.headerTitle}>
+                                <Text style={{ color: Colors.primary[500] }}>S</Text>
+                                <Text style={{ color: Colors.text.primary }}>Lock</Text>
+                            </Text>
+                        </View>
+
+                        {/* Empty State */}
+                        <View style={styles.emptyState}>
+                            <View style={styles.logoWrapper}>
+                                <Image
+                                    source={require('../../assets/slock_logo.png')}
+                                    style={styles.logo}
+                                    resizeMode="contain"
+                                />
+                            </View>
+
+                            <Text style={styles.ctaTitle}>Start to SLock in</Text>
+
+                            <AnimatedPressable
+                                onPress={handleChooseApp}
+                                onPressIn={handlePressIn}
+                                onPressOut={handlePressOut}
+                                style={[styles.ctaButton, buttonStyle]}
+                            >
+                                <LinearGradient
+                                    colors={[Colors.primary[500], Colors.primary[600]]}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.ctaButtonGradient}
+                                >
+                                    <Ionicons name="add" size={18} color="#FFFFFF" />
+                                    <Text style={styles.ctaButtonText}>Add An App</Text>
+                                </LinearGradient>
+                            </AnimatedPressable>
+                        </View>
+                    </SafeAreaView>
+                </AnimatedBackground>
+            ) : (
+                /* LOCKED SESSION STATE - Serious, Quiet, Intentional */
+                <View style={styles.lockedContainer}>
+                    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+                        {/* Top - Timer */}
+                        <View style={styles.timerSection}>
+                            <Text style={styles.timerDisplay}>{formatSessionTime(sessionDuration)}</Text>
+                            <Text style={styles.sessionLabel}>Focus session active</Text>
+                        </View>
+
+                        {/* Middle - Emotional Feedback */}
+                        <View style={styles.mascotSection}>
+                            <Animated.View style={[styles.mascotContainer, mascotStyle]}>
+                                <View style={styles.mascotFace}>
+                                    {/* Judgy eyes */}
+                                    <View style={styles.eyesRow}>
+                                        <View style={styles.eye}>
+                                            <View style={styles.eyebrow} />
+                                            <View style={styles.pupil} />
+                                        </View>
+                                        <View style={styles.eye}>
+                                            <View style={styles.eyebrow} />
+                                            <View style={styles.pupil} />
+                                        </View>
+                                    </View>
+                                    {/* Neutral/serious mouth */}
+                                    <View style={styles.mouth} />
+                                </View>
+                            </Animated.View>
+                            <Text style={styles.lockMessage}>{lockMessage}</Text>
+                        </View>
+
+                        {/* Breaks remaining */}
+                        <View style={styles.breaksInfo}>
+                            <Ionicons name="pause-circle-outline" size={18} color={Colors.spec.gray500} />
+                            <Text style={styles.breaksText}>{breaksRemaining} breaks remaining</Text>
+                        </View>
+
+                        {/* Bottom - Controls */}
+                        <View style={styles.controlsSection}>
+                            <Pressable
+                                style={styles.viewAppsButton}
+                                onPress={handleViewLockedApps}
+                            >
+                                <Ionicons name="lock-closed-outline" size={20} color={Colors.spec.gray700} />
+                                <Text style={styles.viewAppsText}>View Locked Apps</Text>
+                            </Pressable>
+
+                            <Pressable
+                                style={styles.endButton}
+                                onPress={handleEndSessionPress}
+                            >
+                                <Text style={styles.endButtonText}>End Session Early</Text>
+                            </Pressable>
+                        </View>
+                    </SafeAreaView>
                 </View>
+            )}
 
-                {/* Empty State */}
-                {screenState === 'empty' && (
-                    <View style={styles.emptyState}>
-                        {/* Logo */}
-                        <View style={styles.logoWrapper}>
-                            <Image
-                                source={require('../../assets/slock_logo.png')}
-                                style={styles.logo}
-                                resizeMode="contain"
-                            />
-                        </View>
+            {/* App Picker Modal */}
+            <Modal
+                visible={showAppPicker}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowAppPicker(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHandle} />
 
-                        {/* CTA Text */}
-                        <Text style={styles.ctaTitle}>Start to SLock in</Text>
+                        <Text style={styles.modalTitle}>Choose Apps to Lock</Text>
+                        <Text style={styles.modalSubtitle}>
+                            Ranked by your screen{'\u00A0'}time
+                        </Text>
 
-                        {/* Add An App Button */}
-                        <AnimatedPressable
-                            onPress={handleChooseApp}
-                            onPressIn={handlePressIn}
-                            onPressOut={handlePressOut}
-                            style={[styles.ctaButton, buttonStyle]}
-                        >
-                            <LinearGradient
-                                colors={[Colors.primary[500], Colors.primary[600]]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.ctaButtonGradient}
-                            >
-                                <Ionicons name="add" size={18} color="#FFFFFF" />
-                                <Text style={styles.ctaButtonText}>Add An App</Text>
-                            </LinearGradient>
-                        </AnimatedPressable>
-                    </View>
-                )}
-
-                {/* Active Session State */}
-                {screenState === 'session' && (
-                    <View style={styles.sessionContainer}>
                         <ScrollView
-                            style={styles.sessionScrollView}
+                            style={styles.appList}
                             showsVerticalScrollIndicator={false}
-                            contentContainerStyle={styles.sessionScrollContent}
                         >
-                            {/* Stats Card - Screen Time */}
-                            <View style={styles.statsCard}>
-                                <View style={styles.statsCardRow}>
-                                    {/* Screen Time Saved */}
-                                    <View style={styles.statsCardItem}>
-                                        <View style={styles.statsCardIconWrapper}>
-                                            <Ionicons name="shield-checkmark" size={20} color={Colors.success[500]} />
-                                        </View>
-                                        <Text style={styles.statsCardValue}>{formatTime(screenTimeToday)}</Text>
-                                        <Text style={styles.statsCardLabel}>Screen time saved</Text>
-                                    </View>
-
-                                    <View style={styles.statsCardDivider} />
-
-                                    {/* Current Screen Time */}
-                                    <View style={styles.statsCardItem}>
-                                        <View style={styles.statsCardIconWrapper}>
-                                            <Ionicons name="time-outline" size={20} color={Colors.primary[500]} />
-                                        </View>
-                                        <Text style={styles.statsCardValue}>3h 24m</Text>
-                                        <Text style={styles.statsCardLabel}>Screen time today</Text>
-                                    </View>
-                                </View>
-                            </View>
-
-                            {/* Your Apps Section */}
-                            <View style={styles.appsSection}>
-                                <View style={styles.appsSectionHeader}>
-                                    <Text style={styles.appsSectionTitle}>Your apps</Text>
-                                    {/* Only show Add button when all available apps are locked */}
-                                    {selectedApps.length >= AVAILABLE_APPS.length && (
-                                        <Pressable onPress={handleAddMoreApps} style={styles.addMoreButton}>
-                                            <Ionicons name="add-circle-outline" size={20} color={Colors.primary[500]} />
-                                            <Text style={styles.addMoreText}>Add</Text>
-                                        </Pressable>
-                                    )}
-                                </View>
-
-                                {/* App Cards */}
-                                {selectedApps.map((app) => (
-                                    <View key={app.id} style={styles.appCard}>
-                                        <View style={[styles.appCardIcon, { backgroundColor: app.color + '15' }]}>
-                                            <Ionicons name={app.icon as any} size={28} color={app.color} />
-                                        </View>
-                                        <View style={styles.appCardContent}>
-                                            <Text style={styles.appCardName}>{app.name}</Text>
-                                            <View style={styles.appCardStats}>
-                                                <Text style={styles.appCardStatText}>
-                                                    {app.screenTime} min today
-                                                </Text>
-                                                <View style={styles.appCardStatDot} />
-                                                <Text style={[styles.appCardStatText, { color: Colors.success[500] }]}>
-                                                    {app.minutesSaved} min saved
-                                                </Text>
+                            {AVAILABLE_APPS
+                                .filter(app => !selectedApps.some(selected => selected.id === app.id))
+                                .map((app, index) => {
+                                    const isSelected = tempSelectedIds.includes(app.id);
+                                    return (
+                                        <Pressable
+                                            key={app.id}
+                                            onPress={() => toggleAppSelection(app.id)}
+                                            style={[styles.appSelectCard, isSelected && styles.appSelectCardActive]}
+                                        >
+                                            <View style={styles.appSelectRank}>
+                                                <Text style={styles.appSelectRankText}>{index + 1}</Text>
                                             </View>
-                                        </View>
-                                        <View style={styles.lockedBadge}>
-                                            <Ionicons name="lock-closed" size={12} color="#FFFFFF" />
-                                        </View>
-                                    </View>
-                                ))}
-
-                                {/* Add Apps Card - only show when there are more apps available */}
-                                {selectedApps.length < AVAILABLE_APPS.length && (
-                                    <Pressable
-                                        onPress={handleAddMoreApps}
-                                        style={styles.addAppsCard}
-                                    >
-                                        <View style={styles.addAppsIconWrapper}>
-                                            <Ionicons name="add" size={24} color={Colors.primary[500]} />
-                                        </View>
-                                        <Text style={styles.addAppsText}>Add apps</Text>
-                                    </Pressable>
-                                )}
-                            </View>
+                                            <View style={[styles.appSelectIcon, { backgroundColor: app.color + '20' }]}>
+                                                <Ionicons name={app.icon as any} size={24} color={app.color} />
+                                            </View>
+                                            <View style={styles.appSelectInfo}>
+                                                <Text style={styles.appSelectName}>{app.name}</Text>
+                                                <Text style={styles.appSelectTime}>{formatTime(app.screenTime)} today</Text>
+                                            </View>
+                                            <View style={[
+                                                styles.appSelectCheck,
+                                                isSelected && styles.appSelectCheckActive
+                                            ]}>
+                                                {isSelected && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                                            </View>
+                                        </Pressable>
+                                    );
+                                })}
                         </ScrollView>
-                    </View>
-                )}
 
-                {/* App Picker Modal */}
-                <Modal
-                    visible={showAppPicker}
-                    animationType="slide"
-                    transparent={true}
-                    onRequestClose={() => setShowAppPicker(false)}
-                >
-                    <View style={styles.modalOverlay}>
-                        <View style={styles.modalContent}>
-                            <View style={styles.modalHandle} />
-
-                            <Text style={styles.modalTitle}>Choose Apps to Lock</Text>
-                            <Text style={styles.modalSubtitle}>
-                                Ranked by your screen{'\u00A0'}time
-                            </Text>
-
-                            <ScrollView
-                                style={styles.appList}
-                                showsVerticalScrollIndicator={false}
+                        <View style={styles.modalActions}>
+                            <Pressable
+                                onPress={() => setShowAppPicker(false)}
+                                style={styles.modalCancelButton}
                             >
-                                {AVAILABLE_APPS
-                                    .filter(app => !selectedApps.some(selected => selected.id === app.id))
-                                    .map((app, index) => {
-                                        const isSelected = tempSelectedIds.includes(app.id);
-                                        return (
-                                            <Pressable
-                                                key={app.id}
-                                                onPress={() => toggleAppSelection(app.id)}
-                                                style={[styles.appSelectCard, isSelected && styles.appSelectCardActive]}
-                                            >
-                                                <View style={styles.appSelectRank}>
-                                                    <Text style={styles.appSelectRankText}>{index + 1}</Text>
-                                                </View>
-                                                <View style={[styles.appSelectIcon, { backgroundColor: app.color + '20' }]}>
-                                                    <Ionicons name={app.icon as any} size={24} color={app.color} />
-                                                </View>
-                                                <View style={styles.appSelectInfo}>
-                                                    <Text style={styles.appSelectName}>{app.name}</Text>
-                                                    <Text style={styles.appSelectTime}>{formatTime(app.screenTime)} today</Text>
-                                                </View>
-                                                <View style={[
-                                                    styles.appSelectCheck,
-                                                    isSelected && styles.appSelectCheckActive
-                                                ]}>
-                                                    {isSelected && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
-                                                </View>
-                                            </Pressable>
-                                        );
-                                    })}
-                            </ScrollView>
-
-                            <View style={styles.modalActions}>
-                                <Pressable
-                                    onPress={() => setShowAppPicker(false)}
-                                    style={styles.modalCancelButton}
-                                >
-                                    <Text style={styles.modalCancelText}>Cancel</Text>
-                                </Pressable>
-                                <Pressable
-                                    onPress={confirmAppSelection}
-                                    disabled={tempSelectedIds.length === 0}
-                                    style={[
-                                        styles.modalConfirmButton,
-                                        tempSelectedIds.length === 0 && styles.modalConfirmButtonDisabled
-                                    ]}
-                                >
-                                    <LinearGradient
-                                        colors={tempSelectedIds.length > 0 ? [Colors.primary[500], Colors.primary[600]] : [Colors.neutral[300], Colors.neutral[300]]}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
-                                        style={styles.modalConfirmGradient}
-                                    >
-                                        <Ionicons
-                                            name="lock-closed"
-                                            size={18}
-                                            color={tempSelectedIds.length > 0 ? '#FFFFFF' : Colors.neutral[500]}
-                                        />
-                                        <Text style={[
-                                            styles.modalConfirmText,
-                                            tempSelectedIds.length === 0 && styles.modalConfirmTextDisabled
-                                        ]}>
-                                            Start Locking ({tempSelectedIds.length})
-                                        </Text>
-                                    </LinearGradient>
-                                </Pressable>
-                            </View>
-                        </View>
-                    </View>
-                </Modal>
-
-                {/* Breaks Selection Modal */}
-                <Modal
-                    visible={showBreaksModal}
-                    animationType="slide"
-                    transparent={true}
-                    onRequestClose={() => setShowBreaksModal(false)}
-                >
-                    <View style={styles.modalOverlay}>
-                        <View style={styles.breaksModalContent}>
-                            <View style={styles.modalHandle} />
-
-                            <Text style={styles.modalTitle}>How many breaks?</Text>
-                            <Text style={styles.modalSubtitle}>
-                                Allow yourself short breaks during the session
-                            </Text>
-
-                            {/* Breaks Counter */}
-                            <View style={styles.breaksCounter}>
-                                {/* Decrease Button */}
-                                <Pressable
-                                    onPress={() => {
-                                        Haptics.selectionAsync();
-                                        setSelectedBreaks(prev => Math.max(0, prev - 1));
-                                    }}
-                                    style={[
-                                        styles.breaksButton,
-                                        selectedBreaks === 0 && styles.breaksButtonDisabled
-                                    ]}
-                                    disabled={selectedBreaks === 0}
+                                <Text style={styles.modalCancelText}>Cancel</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={confirmAppSelection}
+                                disabled={tempSelectedIds.length === 0}
+                                style={[
+                                    styles.modalConfirmButton,
+                                    tempSelectedIds.length === 0 && styles.modalConfirmButtonDisabled
+                                ]}
+                            >
+                                <LinearGradient
+                                    colors={tempSelectedIds.length > 0 ? [Colors.primary[500], Colors.primary[600]] : [Colors.neutral[300], Colors.neutral[300]]}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.modalConfirmGradient}
                                 >
                                     <Ionicons
-                                        name="remove"
-                                        size={28}
-                                        color={selectedBreaks === 0 ? Colors.neutral[300] : Colors.primary[500]}
+                                        name="lock-closed"
+                                        size={18}
+                                        color={tempSelectedIds.length > 0 ? '#FFFFFF' : Colors.neutral[500]}
                                     />
-                                </Pressable>
+                                    <Text style={[
+                                        styles.modalConfirmText,
+                                        tempSelectedIds.length === 0 && styles.modalConfirmTextDisabled
+                                    ]}>
+                                        Start Locking ({tempSelectedIds.length})
+                                    </Text>
+                                </LinearGradient>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
-                                {/* Counter Display */}
-                                <View style={styles.breaksDisplay}>
-                                    <Text style={styles.breaksValue}>{selectedBreaks}</Text>
-                                    <Text style={styles.breaksLabel}>
-                                        {selectedBreaks === 1 ? 'break' : 'breaks'}
+            {/* Breaks Selection Modal */}
+            <Modal
+                visible={showBreaksModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowBreaksModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.breaksModalContent}>
+                        <View style={styles.modalHandle} />
+
+                        <Text style={styles.modalTitle}>How many breaks?</Text>
+                        <Text style={styles.modalSubtitle}>
+                            Allow yourself short breaks during the session
+                        </Text>
+
+                        <View style={styles.breaksCounter}>
+                            <Pressable
+                                onPress={() => {
+                                    Haptics.selectionAsync();
+                                    setSelectedBreaks(prev => Math.max(0, prev - 1));
+                                }}
+                                style={[
+                                    styles.breaksButton,
+                                    selectedBreaks === 0 && styles.breaksButtonDisabled
+                                ]}
+                                disabled={selectedBreaks === 0}
+                            >
+                                <Ionicons
+                                    name="remove"
+                                    size={28}
+                                    color={selectedBreaks === 0 ? Colors.neutral[300] : Colors.primary[500]}
+                                />
+                            </Pressable>
+
+                            <View style={styles.breaksDisplay}>
+                                <Text style={styles.breaksValue}>{selectedBreaks}</Text>
+                                <Text style={styles.breaksLabel}>
+                                    {selectedBreaks === 1 ? 'break' : 'breaks'}
+                                </Text>
+                            </View>
+
+                            <Pressable
+                                onPress={() => {
+                                    Haptics.selectionAsync();
+                                    setSelectedBreaks(prev => Math.min(10, prev + 1));
+                                }}
+                                style={[
+                                    styles.breaksButton,
+                                    selectedBreaks === 10 && styles.breaksButtonDisabled
+                                ]}
+                                disabled={selectedBreaks === 10}
+                            >
+                                <Ionicons
+                                    name="add"
+                                    size={28}
+                                    color={selectedBreaks === 10 ? Colors.neutral[300] : Colors.primary[500]}
+                                />
+                            </Pressable>
+                        </View>
+
+                        <View style={styles.modalActions}>
+                            <Pressable
+                                onPress={() => {
+                                    setShowBreaksModal(false);
+                                    setShowAppPicker(true);
+                                }}
+                                style={styles.modalCancelButton}
+                            >
+                                <Text style={styles.modalCancelText}>Back</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={confirmBreaksSelection}
+                                style={styles.modalConfirmButton}
+                            >
+                                <LinearGradient
+                                    colors={[Colors.primary[500], Colors.primary[600]]}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.modalConfirmGradient}
+                                >
+                                    <Ionicons name="play" size={18} color="#FFFFFF" />
+                                    <Text style={styles.modalConfirmText}>Start Session</Text>
+                                </LinearGradient>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* View Locked Apps Modal */}
+            <Modal
+                visible={showLockedApps}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowLockedApps(false)}
+            >
+                <Pressable style={styles.modalOverlay} onPress={() => setShowLockedApps(false)}>
+                    <View style={styles.lockedAppsModal}>
+                        <View style={styles.modalHandle} />
+                        <Text style={styles.modalTitle}>Locked Apps</Text>
+                        <Text style={styles.modalSubtitle}>
+                            {selectedApps.length} apps locked • {formatSessionTime(sessionDuration)} elapsed
+                        </Text>
+
+                        <ScrollView style={styles.lockedAppsList} showsVerticalScrollIndicator={false}>
+                            {selectedApps.map((app) => (
+                                <Pressable
+                                    key={app.id}
+                                    style={styles.lockedAppRow}
+                                    onPress={() => {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                        setDetailApp(app);
+                                        setShowLockedApps(false);
+                                        setShowAppDetail(true);
+                                    }}
+                                >
+                                    <View style={[styles.lockedAppIcon, { backgroundColor: app.color + '15' }]}>
+                                        <Ionicons name={app.icon as any} size={24} color={app.color} />
+                                    </View>
+                                    <View style={styles.lockedAppInfo}>
+                                        <Text style={styles.lockedAppName}>{app.name}</Text>
+                                        <Text style={styles.lockedAppSaved}>
+                                            {app.minutesSaved > 0 ? `${app.minutesSaved}m saved` : 'Locked'}
+                                        </Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={18} color={Colors.spec.gray400} />
+                                </Pressable>
+                            ))}
+                        </ScrollView>
+
+                        <View style={styles.lockedAppsNote}>
+                            <Ionicons name="information-circle-outline" size={16} color={Colors.spec.gray500} />
+                            <Text style={styles.lockedAppsNoteText}>
+                                Apps cannot be removed during an active session
+                            </Text>
+                        </View>
+
+                        <Pressable style={styles.closeModalButton} onPress={() => setShowLockedApps(false)}>
+                            <Text style={styles.closeModalText}>Close</Text>
+                        </Pressable>
+                    </View>
+                </Pressable>
+            </Modal>
+
+            {/* End Session Confirmation Modal */}
+            <Modal
+                visible={showEndConfirm}
+                animationType="fade"
+                transparent={true}
+                onRequestClose={() => setShowEndConfirm(false)}
+            >
+                <View style={styles.endConfirmOverlay}>
+                    <View style={styles.endConfirmModal}>
+                        <View style={styles.endConfirmIcon}>
+                            <Ionicons name="warning" size={32} color={Colors.primary[500]} />
+                        </View>
+                        <Text style={styles.endConfirmTitle}>End Session Early?</Text>
+
+                        <View style={styles.consequencesList}>
+                            <View style={styles.consequenceRow}>
+                                <Ionicons name="close-circle" size={18} color={Colors.primary[500]} />
+                                <Text style={styles.consequenceText}>This will be visible to your study circle</Text>
+                            </View>
+                            <View style={styles.consequenceRow}>
+                                <Ionicons name="close-circle" size={18} color={Colors.primary[500]} />
+                                <Text style={styles.consequenceText}>You'll lose today's streak</Text>
+                            </View>
+                            <View style={styles.consequenceRow}>
+                                <Ionicons name="close-circle" size={18} color={Colors.primary[500]} />
+                                <Text style={styles.consequenceText}>Locked apps will be unlocked</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.endConfirmActions}>
+                            <Pressable
+                                style={styles.stayFocusedButton}
+                                onPress={() => setShowEndConfirm(false)}
+                            >
+                                <LinearGradient
+                                    colors={[Colors.spec.emerald500, Colors.spec.emerald600]}
+                                    style={styles.stayFocusedGradient}
+                                >
+                                    <Ionicons name="shield-checkmark" size={18} color="#FFFFFF" />
+                                    <Text style={styles.stayFocusedText}>Stay Focused</Text>
+                                </LinearGradient>
+                            </Pressable>
+                            <Pressable
+                                style={styles.confirmEndButton}
+                                onPress={confirmEndSession}
+                            >
+                                <Text style={styles.confirmEndText}>End Anyway</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* App Detail Modal */}
+            <Modal
+                visible={showAppDetail}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowAppDetail(false)}
+            >
+                <Pressable style={styles.modalOverlay} onPress={() => setShowAppDetail(false)}>
+                    <View style={styles.appDetailModal} onStartShouldSetResponder={() => true}>
+                        <View style={styles.modalHandle} />
+
+                        {detailApp && (
+                            <>
+                                {/* App Header */}
+                                <View style={styles.appDetailHeader}>
+                                    <View style={[styles.appDetailIcon, { backgroundColor: detailApp.color + '15' }]}>
+                                        <Ionicons name={detailApp.icon as any} size={36} color={detailApp.color} />
+                                    </View>
+                                    <Text style={styles.appDetailName}>{detailApp.name}</Text>
+                                    <View style={styles.lockedBadge}>
+                                        <Ionicons name="lock-closed" size={12} color="#FFFFFF" />
+                                        <Text style={styles.lockedBadgeText}>Locked</Text>
+                                    </View>
+                                </View>
+
+                                {/* Why Locked */}
+                                <View style={styles.appDetailSection}>
+                                    <Text style={styles.appDetailSectionTitle}>Why it's locked</Text>
+                                    <Text style={styles.appDetailSectionText}>
+                                        You chose to lock {detailApp.name} to reduce screen time and stay focused.
                                     </Text>
                                 </View>
 
-                                {/* Increase Button */}
-                                <Pressable
-                                    onPress={() => {
-                                        Haptics.selectionAsync();
-                                        setSelectedBreaks(prev => Math.min(10, prev + 1));
-                                    }}
-                                    style={[
-                                        styles.breaksButton,
-                                        selectedBreaks === 10 && styles.breaksButtonDisabled
-                                    ]}
-                                    disabled={selectedBreaks === 10}
-                                >
-                                    <Ionicons
-                                        name="add"
-                                        size={28}
-                                        color={selectedBreaks === 10 ? Colors.neutral[300] : Colors.primary[500]}
-                                    />
-                                </Pressable>
-                            </View>
+                                {/* Stats Row */}
+                                <View style={styles.appDetailStats}>
+                                    <View style={styles.appDetailStat}>
+                                        <Text style={styles.appDetailStatValue}>{formatSessionTime(sessionDuration)}</Text>
+                                        <Text style={styles.appDetailStatLabel}>Elapsed</Text>
+                                    </View>
+                                    <View style={styles.appDetailStatDivider} />
+                                    <View style={styles.appDetailStat}>
+                                        <Text style={styles.appDetailStatValue}>{breaksRemaining}</Text>
+                                        <Text style={styles.appDetailStatLabel}>Breaks left</Text>
+                                    </View>
+                                    <View style={styles.appDetailStatDivider} />
+                                    <View style={styles.appDetailStat}>
+                                        <Text style={styles.appDetailStatValue}>{detailApp.minutesSaved}m</Text>
+                                        <Text style={styles.appDetailStatLabel}>Saved</Text>
+                                    </View>
+                                </View>
 
-                            <View style={styles.modalActions}>
-                                <Pressable
-                                    onPress={() => {
-                                        setShowBreaksModal(false);
-                                        setShowAppPicker(true); // Go back to app picker
-                                    }}
-                                    style={styles.modalCancelButton}
-                                >
-                                    <Text style={styles.modalCancelText}>Back</Text>
+                                {/* Actions */}
+                                <View style={styles.appDetailActions}>
+                                    {breaksRemaining > 0 ? (
+                                        <Pressable
+                                            style={styles.useBreakButton}
+                                            onPress={() => {
+                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                                setBreaksRemaining(prev => prev - 1);
+                                                setShowAppDetail(false);
+                                                // In real app, would unlock for break duration
+                                            }}
+                                        >
+                                            <Ionicons name="pause-circle" size={20} color={Colors.spec.amber600} />
+                                            <Text style={styles.useBreakText}>Use a Break</Text>
+                                        </Pressable>
+                                    ) : (
+                                        <View style={styles.noBreaksMessage}>
+                                            <Ionicons name="alert-circle" size={18} color={Colors.spec.gray500} />
+                                            <Text style={styles.noBreaksText}>No breaks remaining</Text>
+                                        </View>
+                                    )}
+                                </View>
+
+                                {/* Disabled Actions Note */}
+                                <View style={styles.disabledNote}>
+                                    <Ionicons name="information-circle-outline" size={16} color={Colors.spec.gray400} />
+                                    <Text style={styles.disabledNoteText}>
+                                        Removing apps or changing duration is disabled during lock
+                                    </Text>
+                                </View>
+
+                                <Pressable style={styles.closeModalButton} onPress={() => setShowAppDetail(false)}>
+                                    <Text style={styles.closeModalText}>Close</Text>
                                 </Pressable>
-                                <Pressable
-                                    onPress={confirmBreaksSelection}
-                                    style={styles.modalConfirmButton}
-                                >
-                                    <LinearGradient
-                                        colors={[Colors.primary[500], Colors.primary[600]]}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
-                                        style={styles.modalConfirmGradient}
-                                    >
-                                        <Ionicons name="play" size={18} color="#FFFFFF" />
-                                        <Text style={styles.modalConfirmText}>Start Session</Text>
-                                    </LinearGradient>
-                                </Pressable>
-                            </View>
-                        </View>
+                            </>
+                        )}
                     </View>
-                </Modal>
-            </SafeAreaView>
-        </AnimatedBackground>
+                </Pressable>
+            </Modal>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
+    },
+    safeArea: {
         flex: 1,
     },
     // Header
@@ -521,12 +710,6 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 24,
         fontWeight: '700',
-    },
-    headerS: {
-        color: Colors.primary[500],
-    },
-    headerLock: {
-        color: Colors.success[500],
     },
     // Empty State
     emptyState: {
@@ -570,270 +753,134 @@ const styles = StyleSheet.create({
         ...Typography.button,
         color: '#FFFFFF',
     },
-    // Session State
-    sessionContainer: {
+    // LOCKED SESSION STATE
+    lockedContainer: {
         flex: 1,
+        backgroundColor: '#FAFAFA',
     },
-    sessionScrollView: {
-        flex: 1,
-    },
-    sessionScrollContent: {
-        paddingHorizontal: 20,
-        paddingTop: 8,
-        paddingBottom: 40,
-    },
-    // Stats Card - Light Theme with subtle gradient tint
-    statsCard: {
-        backgroundColor: 'rgba(239, 246, 255, 0.8)',
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(191, 219, 254, 0.5)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    statsCardRow: {
-        flexDirection: 'row',
+    // Timer Section
+    timerSection: {
         alignItems: 'center',
+        paddingTop: 48,
+        paddingBottom: 24,
     },
-    statsCardItem: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    statsCardIconWrapper: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        backgroundColor: Colors.spec.gray50,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    statsCardValue: {
-        ...Typography.h2,
+    timerDisplay: {
+        fontSize: 72,
+        fontWeight: '200',
         color: Colors.spec.gray900,
-        marginBottom: Spacing.micro,
+        letterSpacing: 4,
+        fontVariant: ['tabular-nums'],
     },
-    statsCardLabel: {
-        ...Typography.caption,
+    sessionLabel: {
+        fontSize: 15,
         color: Colors.spec.gray500,
-        textAlign: 'center',
+        marginTop: 8,
     },
-    statsCardDivider: {
-        width: 1,
-        height: 60,
-        backgroundColor: Colors.spec.gray200,
-        marginHorizontal: 16,
+    // Mascot Section
+    mascotSection: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 48,
     },
-    // Apps Section
-    appsSection: {
+    mascotContainer: {
         marginBottom: 24,
     },
-    appsSectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    mascotFace: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: Colors.spec.gray200,
         alignItems: 'center',
-        marginBottom: 14,
-    },
-    appsSectionTitle: {
-        ...Typography.bodyEmphasis,
-        color: Colors.spec.gray700,
-    },
-    addMoreButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    addMoreText: {
-        ...Typography.small,
-        fontFamily: FontFamily.medium,
-        color: Colors.primary[500],
-    },
-    // App Cards
-    appCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(239, 246, 255, 0.7)',
-        borderRadius: 16,
-        padding: 14,
-        marginBottom: 10,
-        borderWidth: 1,
-        borderColor: 'rgba(191, 219, 254, 0.5)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    appCardIcon: {
-        width: 52,
-        height: 52,
-        borderRadius: 14,
         justifyContent: 'center',
+    },
+    eyesRow: {
+        flexDirection: 'row',
+        gap: 24,
+        marginBottom: 8,
+    },
+    eye: {
+        width: 20,
+        height: 24,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 10,
         alignItems: 'center',
+        justifyContent: 'flex-end',
+        paddingBottom: 4,
     },
-    appCardContent: {
-        flex: 1,
-        marginLeft: 14,
+    eyebrow: {
+        position: 'absolute',
+        top: -8,
+        width: 24,
+        height: 4,
+        backgroundColor: Colors.spec.gray500,
+        borderRadius: 2,
+        transform: [{ rotate: '-10deg' }],
     },
-    appCardName: {
-        ...Typography.bodyEmphasis,
-        color: Colors.spec.gray900,
-        marginBottom: Spacing.micro,
+    pupil: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: Colors.spec.gray700,
     },
-    appCardStats: {
+    mouth: {
+        width: 24,
+        height: 3,
+        backgroundColor: Colors.spec.gray500,
+        borderRadius: 2,
+        marginTop: 8,
+    },
+    lockMessage: {
+        fontSize: 18,
+        fontWeight: '500',
+        color: Colors.spec.gray600,
+        textAlign: 'center',
+        fontStyle: 'italic',
+    },
+    // Breaks Info
+    breaksInfo: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 16,
     },
-    appCardStat: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    appCardStatText: {
-        ...Typography.caption,
+    breaksText: {
+        fontSize: 14,
         color: Colors.spec.gray500,
     },
-    appCardStatDivider: {
-        width: 1,
-        height: 12,
-        backgroundColor: Colors.spec.gray200,
-        marginHorizontal: 10,
+    // Controls Section
+    controlsSection: {
+        paddingHorizontal: 24,
+        paddingBottom: 24,
+        gap: 12,
     },
-    appCardStatDot: {
-        width: 4,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: Colors.spec.gray300,
-        marginHorizontal: 8,
-    },
-    appCardStatus: {
-        marginLeft: 8,
-    },
-    lockedBadge: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: Colors.primary[500],
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    // Add Apps Card
-    addAppsCard: {
+    viewAppsButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.spec.gray50,
-        borderRadius: 16,
-        padding: 14,
-        marginBottom: 10,
-        borderWidth: 2,
-        borderColor: Colors.spec.gray200,
-        borderStyle: 'dashed',
-    },
-    addAppsIconWrapper: {
-        width: 52,
-        height: 52,
-        borderRadius: 14,
-        backgroundColor: Colors.primary.soft,
         justifyContent: 'center',
-        alignItems: 'center',
+        gap: 10,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 14,
+        paddingVertical: 16,
+        borderWidth: 1,
+        borderColor: Colors.spec.gray200,
     },
-    addAppsText: {
-        flex: 1,
-        marginLeft: Spacing.compact,
-        ...Typography.bodyEmphasis,
+    viewAppsText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: Colors.spec.gray700,
+    },
+    endButton: {
+        alignItems: 'center',
+        paddingVertical: 14,
+    },
+    endButtonText: {
+        fontSize: 15,
+        fontWeight: '500',
         color: Colors.primary[500],
     },
-    // End Session
-    endSessionWrapper: {
-        alignItems: 'center',
-        paddingBottom: 20,
-    },
-    endSessionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingVertical: 14,
-        paddingHorizontal: 28,
-        backgroundColor: Colors.spec.red50,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: Colors.spec.red100,
-    },
-    endSessionText: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: Colors.spec.red600,
-    },
-    // Old styles kept for compatibility
-    lockedAppsSection: {
-        flex: 1,
-    },
-    lockedAppsHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    lockedAppsTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: Colors.spec.gray900,
-    },
-    lockedAppsList: {
-        flex: 1,
-    },
-    lockedAppCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 10,
-        borderWidth: 1,
-        borderColor: Colors.spec.gray200,
-    },
-    appIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 14,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    appInfo: {
-        flex: 1,
-        marginLeft: 14,
-    },
-    appName: {
-        ...Typography.bodyEmphasis,
-        color: Colors.spec.gray900,
-        marginBottom: 2,
-    },
-    appStatus: {
-        ...Typography.small,
-        fontFamily: FontFamily.medium,
-        color: Colors.spec.emerald600,
-    },
-    minutesSaved: {
-        alignItems: 'center',
-        backgroundColor: Colors.spec.emerald50,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 12,
-    },
-    minutesSavedValue: {
-        ...Typography.h2,
-        color: Colors.spec.emerald600,
-    },
-    minutesSavedLabel: {
-        ...Typography.micro,
-        color: Colors.spec.emerald600,
-    },
-    // Modal
+    // Modals
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -843,7 +890,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        paddingHorizontal: 24,
+        padding: 24,
         paddingBottom: 40,
         maxHeight: '85%',
     },
@@ -853,21 +900,21 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.spec.gray300,
         borderRadius: 2,
         alignSelf: 'center',
-        marginTop: 12,
         marginBottom: 20,
     },
     modalTitle: {
-        ...Typography.h1,
+        fontSize: 22,
+        fontWeight: '700',
         color: Colors.spec.gray900,
-        marginBottom: Spacing.micro,
+        marginBottom: 4,
     },
     modalSubtitle: {
-        ...Typography.small,
+        fontSize: 14,
         color: Colors.spec.gray500,
-        marginBottom: Spacing.cozy,
+        marginBottom: 20,
     },
     appList: {
-        maxHeight: 400,
+        maxHeight: 300,
     },
     appSelectCard: {
         flexDirection: 'row',
@@ -880,44 +927,39 @@ const styles = StyleSheet.create({
         borderColor: 'transparent',
     },
     appSelectCardActive: {
-        borderColor: Colors.spec.blue500,
-        backgroundColor: Colors.spec.blue50,
+        borderColor: Colors.primary[500],
+        backgroundColor: Colors.primary[50],
     },
     appSelectRank: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: Colors.spec.gray200,
-        justifyContent: 'center',
+        width: 24,
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: 10,
     },
     appSelectRankText: {
-        ...Typography.caption,
-        fontFamily: FontFamily.medium,
-        color: Colors.spec.gray600,
+        fontSize: 14,
+        fontWeight: '600',
+        color: Colors.spec.gray400,
     },
     appSelectIcon: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
+        width: 48,
+        height: 48,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
     },
     appSelectInfo: {
         flex: 1,
-        marginLeft: 12,
+        marginLeft: 14,
     },
     appSelectName: {
-        ...Typography.bodyEmphasis,
-        fontSize: 15,
+        fontSize: 16,
+        fontWeight: '600',
         color: Colors.spec.gray900,
-        marginBottom: 2,
     },
     appSelectTime: {
-        ...Typography.small,
         fontSize: 13,
         color: Colors.spec.gray500,
+        marginTop: 2,
     },
     appSelectCheck: {
         width: 24,
@@ -929,8 +971,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     appSelectCheckActive: {
-        borderColor: Colors.spec.blue500,
-        backgroundColor: Colors.spec.blue500,
+        backgroundColor: Colors.primary[500],
+        borderColor: Colors.primary[500],
     },
     modalActions: {
         flexDirection: 'row',
@@ -940,17 +982,19 @@ const styles = StyleSheet.create({
     modalCancelButton: {
         flex: 1,
         alignItems: 'center',
-        paddingVertical: 16,
-        borderRadius: 14,
+        justifyContent: 'center',
+        paddingVertical: 14,
         backgroundColor: Colors.spec.gray100,
+        borderRadius: 12,
     },
     modalCancelText: {
-        ...Typography.button,
+        fontSize: 16,
+        fontWeight: '600',
         color: Colors.spec.gray700,
     },
     modalConfirmButton: {
-        flex: 2,
-        borderRadius: 14,
+        flex: 1,
+        borderRadius: 12,
         overflow: 'hidden',
     },
     modalConfirmButtonDisabled: {
@@ -961,67 +1005,319 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        paddingVertical: 16,
+        paddingVertical: 14,
     },
     modalConfirmText: {
-        ...Typography.button,
+        fontSize: 16,
+        fontWeight: '600',
         color: '#FFFFFF',
     },
     modalConfirmTextDisabled: {
-        color: Colors.spec.gray500,
+        color: Colors.neutral[500],
     },
     // Breaks Modal
     breaksModalContent: {
-        backgroundColor: 'rgba(239, 246, 255, 0.98)',
+        backgroundColor: '#FFFFFF',
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        paddingHorizontal: 20,
-        paddingBottom: 32,
+        padding: 24,
+        paddingBottom: 40,
     },
-    // Breaks Counter Styles
     breaksCounter: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginVertical: 24,
-        gap: 20,
+        gap: 32,
+        paddingVertical: 32,
     },
     breaksButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: '#FFFFFF',
-        borderWidth: 2,
-        borderColor: Colors.spec.blue200,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: Colors.spec.gray100,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: Colors.spec.blue500,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
     },
     breaksButtonDisabled: {
-        backgroundColor: Colors.spec.gray50,
-        borderColor: Colors.spec.gray200,
-        shadowOpacity: 0,
+        opacity: 0.5,
     },
     breaksDisplay: {
         alignItems: 'center',
-        justifyContent: 'center',
-        minWidth: 80,
     },
     breaksValue: {
-        fontFamily: FontFamily.bold,
-        fontSize: 42,
-        lineHeight: 48,
-        color: Colors.spec.blue600,
-        textAlign: 'center',
+        fontSize: 48,
+        fontWeight: '700',
+        color: Colors.primary[500],
     },
     breaksLabel: {
-        ...Typography.small,
-        fontFamily: FontFamily.medium,
+        fontSize: 14,
         color: Colors.spec.gray500,
         marginTop: 4,
+    },
+    // Locked Apps Modal
+    lockedAppsModal: {
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 24,
+        paddingBottom: 40,
+        maxHeight: '70%',
+    },
+    lockedAppsList: {
+        marginTop: 16,
+    },
+    lockedAppRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.spec.gray100,
+    },
+    lockedAppIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    lockedAppInfo: {
+        flex: 1,
+        marginLeft: 14,
+    },
+    lockedAppName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: Colors.spec.gray900,
+    },
+    lockedAppSaved: {
+        fontSize: 13,
+        color: Colors.spec.gray500,
+        marginTop: 2,
+    },
+    lockedAppsNote: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: Colors.spec.gray50,
+        borderRadius: 12,
+        padding: 14,
+        marginTop: 16,
+    },
+    lockedAppsNoteText: {
+        flex: 1,
+        fontSize: 13,
+        color: Colors.spec.gray500,
+    },
+    closeModalButton: {
+        alignItems: 'center',
+        paddingVertical: 14,
+        marginTop: 16,
+        backgroundColor: Colors.spec.gray100,
+        borderRadius: 12,
+    },
+    closeModalText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: Colors.spec.gray700,
+    },
+    // End Session Confirmation
+    endConfirmOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 24,
+    },
+    endConfirmModal: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 24,
+        padding: 28,
+        width: '100%',
+        alignItems: 'center',
+    },
+    endConfirmIcon: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: Colors.primary[50],
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    endConfirmTitle: {
+        fontSize: 22,
+        fontWeight: '700',
+        color: Colors.spec.gray900,
+        marginBottom: 20,
+    },
+    consequencesList: {
+        width: '100%',
+        gap: 12,
+        marginBottom: 24,
+    },
+    consequenceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    consequenceText: {
+        flex: 1,
+        fontSize: 14,
+        color: Colors.spec.gray600,
+    },
+    endConfirmActions: {
+        width: '100%',
+        gap: 12,
+    },
+    stayFocusedButton: {
+        borderRadius: 14,
+        overflow: 'hidden',
+    },
+    stayFocusedGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        paddingVertical: 16,
+    },
+    stayFocusedText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#FFFFFF',
+    },
+    confirmEndButton: {
+        alignItems: 'center',
+        paddingVertical: 14,
+    },
+    confirmEndText: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: Colors.primary[500],
+    },
+    // App Detail Modal
+    appDetailModal: {
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 24,
+        paddingBottom: 40,
+    },
+    appDetailHeader: {
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    appDetailIcon: {
+        width: 72,
+        height: 72,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    appDetailName: {
+        fontSize: 22,
+        fontWeight: '700',
+        color: Colors.spec.gray900,
+        marginBottom: 8,
+    },
+    lockedBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: Colors.primary[500],
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+    },
+    lockedBadgeText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#FFFFFF',
+    },
+    appDetailSection: {
+        backgroundColor: Colors.spec.gray50,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+    },
+    appDetailSectionTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: Colors.spec.gray700,
+        marginBottom: 6,
+    },
+    appDetailSectionText: {
+        fontSize: 14,
+        color: Colors.spec.gray600,
+        lineHeight: 20,
+    },
+    appDetailStats: {
+        flexDirection: 'row',
+        backgroundColor: Colors.spec.gray50,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 20,
+    },
+    appDetailStat: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    appDetailStatValue: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: Colors.spec.gray900,
+    },
+    appDetailStatLabel: {
+        fontSize: 12,
+        color: Colors.spec.gray500,
+        marginTop: 4,
+    },
+    appDetailStatDivider: {
+        width: 1,
+        backgroundColor: Colors.spec.gray200,
+        marginHorizontal: 8,
+    },
+    appDetailActions: {
+        marginBottom: 16,
+    },
+    useBreakButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        backgroundColor: Colors.spec.amber100,
+        borderRadius: 14,
+        paddingVertical: 16,
+        borderWidth: 1,
+        borderColor: Colors.spec.amber400,
+    },
+    useBreakText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: Colors.spec.amber600,
+    },
+    noBreaksMessage: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: Colors.spec.gray100,
+        borderRadius: 14,
+        paddingVertical: 16,
+    },
+    noBreaksText: {
+        fontSize: 15,
+        color: Colors.spec.gray500,
+    },
+    disabledNote: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingVertical: 12,
+    },
+    disabledNoteText: {
+        flex: 1,
+        fontSize: 13,
+        color: Colors.spec.gray400,
     },
 });

@@ -8,16 +8,8 @@ export default function TabLayout() {
             tabBar={(props) => <LiquidTabBar {...props} />}
             screenOptions={{
                 headerShown: false,
-                // Smooth horizontal slide animation matching the blob speed
-                animation: 'shift',
-                transitionSpec: {
-                    animation: 'spring',
-                    config: {
-                        damping: 18,      // Same as blob animation
-                        stiffness: 150,   // Same as blob animation
-                        mass: 0.8,        // Same as blob animation
-                    },
-                },
+                // No screen transition animation - instant switch
+                animation: 'none',
             }}
         >
             {/* Home Tab */}

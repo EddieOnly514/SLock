@@ -48,8 +48,7 @@ function AppContent() {
         <Stack.Screen
           name="circle"
           options={{
-            animation: 'fade',
-            animationDuration: 150,
+            animation: 'none',
             gestureEnabled: false,
           }}
         />

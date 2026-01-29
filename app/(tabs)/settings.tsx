@@ -6,9 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import Colors from '../../constants/Colors';
 import Theme from '../../constants/Theme';
 
@@ -48,7 +51,7 @@ export default function SettingsScreen() {
       id: 'profile',
       title: 'Edit Profile',
       subtitle: 'Update your username and photo',
-      icon: '👤',
+      icon: 'person-outline',
       onPress: () => console.log('Edit profile'),
       showArrow: true,
     },
@@ -56,7 +59,7 @@ export default function SettingsScreen() {
       id: 'privacy',
       title: 'Privacy',
       subtitle: 'Control who can see your activity',
-      icon: '🔒',
+      icon: 'lock-closed-outline',
       onPress: () => console.log('Privacy settings'),
       showArrow: true,
     },
@@ -64,7 +67,7 @@ export default function SettingsScreen() {
       id: 'friends',
       title: 'Friends & Following',
       subtitle: 'Manage your connections',
-      icon: '👥',
+      icon: 'people-outline',
       onPress: () => console.log('Manage friends'),
       showArrow: true,
     },
@@ -75,7 +78,7 @@ export default function SettingsScreen() {
       id: 'notifications',
       title: 'Notifications',
       subtitle: 'Customize alerts and reminders',
-      icon: '🔔',
+      icon: 'notifications-outline',
       onPress: () => console.log('Notifications'),
       showArrow: true,
     },
@@ -83,7 +86,7 @@ export default function SettingsScreen() {
       id: 'theme',
       title: 'Theme',
       subtitle: 'Light or dark mode',
-      icon: '🎨',
+      icon: 'color-palette-outline',
       onPress: () => console.log('Theme'),
       showArrow: true,
     },
@@ -91,7 +94,7 @@ export default function SettingsScreen() {
       id: 'tracking',
       title: 'App Tracking',
       subtitle: 'Manage tracked apps',
-      icon: '📊',
+      icon: 'analytics-outline',
       onPress: () => console.log('App tracking'),
       showArrow: true,
     },
@@ -102,7 +105,7 @@ export default function SettingsScreen() {
       id: 'help',
       title: 'Help & Support',
       subtitle: 'Get help with SLock',
-      icon: '❓',
+      icon: 'help-circle-outline',
       onPress: () => console.log('Help'),
       showArrow: true,
     },
@@ -110,7 +113,7 @@ export default function SettingsScreen() {
       id: 'feedback',
       title: 'Send Feedback',
       subtitle: 'Help us improve SLock',
-      icon: '💬',
+      icon: 'chatbubble-outline',
       onPress: () => console.log('Feedback'),
       showArrow: true,
     },
@@ -118,7 +121,7 @@ export default function SettingsScreen() {
       id: 'about',
       title: 'About SLock',
       subtitle: 'Version 1.0.0',
-      icon: 'ℹ️',
+      icon: 'information-circle-outline',
       onPress: () => console.log('About'),
       showArrow: true,
     },
@@ -128,14 +131,14 @@ export default function SettingsScreen() {
     {
       id: 'logout',
       title: 'Log Out',
-      icon: '🚪',
+      icon: 'log-out-outline',
       onPress: handleLogout,
       danger: true,
     },
     {
       id: 'delete',
       title: 'Delete Account',
-      icon: '🗑️',
+      icon: 'trash-outline',
       onPress: () => console.log('Delete account'),
       danger: true,
     },
@@ -148,8 +151,8 @@ export default function SettingsScreen() {
       onPress={item.onPress}
       activeOpacity={0.7}
     >
-      <View style={styles.settingIcon}>
-        <Text style={styles.settingIconText}>{item.icon}</Text>
+      <View style={[styles.settingIcon, item.danger && styles.settingIconDanger]}>
+        <Ionicons name={item.icon as any} size={22} color={item.danger ? Colors.error[500] : Colors.primary[500]} />
       </View>
       <View style={styles.settingContent}>
         <Text
@@ -175,7 +178,15 @@ export default function SettingsScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
+          <Pressable
+            style={styles.backButton}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.replace('/profile');
+            }}
+          >
+            <Ionicons name="chevron-back" size={28} color={Colors.primary[500]} />
+          </Pressable>
         </View>
 
         {/* Account Section */}
@@ -213,7 +224,7 @@ export default function SettingsScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Made with ❤️ to help you focus
+            Made with care to help you focus
           </Text>
           <Text style={styles.footerText}>© 2025 SLock</Text>
         </View>
@@ -231,13 +242,17 @@ const styles = StyleSheet.create({
     paddingBottom: Theme.spacing.xxl,
   },
   header: {
-    paddingHorizontal: Theme.spacing.lg,
-    paddingVertical: Theme.spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Theme.spacing.md,
+    paddingVertical: Theme.spacing.sm,
   },
-  title: {
-    fontSize: Theme.fontSize.xxl,
-    fontWeight: Theme.fontWeight.bold,
-    color: Colors.text.primary,
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   section: {
     marginBottom: Theme.spacing.xl,
@@ -245,7 +260,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: Theme.fontSize.sm,
     fontWeight: Theme.fontWeight.semibold,
-    color: Colors.text.tertiary,
+    color: Colors.primary[500],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     paddingHorizontal: Theme.spacing.lg,
@@ -271,10 +286,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: Theme.borderRadius.md,
-    backgroundColor: Colors.neutral[50],
+    backgroundColor: Colors.primary[50],
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Theme.spacing.md,
+  },
+  settingIconDanger: {
+    backgroundColor: Colors.error[50],
   },
   settingIconText: {
     fontSize: 20,
