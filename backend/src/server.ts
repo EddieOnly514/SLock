@@ -13,6 +13,7 @@ import appScheduleRoutes from "./routes/appSchedule";
 import friendsRoutes from "./routes/friends";
 import activitiesRoutes from "./routes/activities";
 import dailySummariesRoutes from "./routes/dailySummaries";
+import circlesRoutes from "./routes/circles";
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -30,6 +31,7 @@ app.use('/api/app-schedules', appScheduleRoutes);
 app.use('/api/friends', friendsRoutes);
 app.use('/api/activities', activitiesRoutes);
 app.use('/api/daily-summaries', dailySummariesRoutes);
+app.use('/api/circles', circlesRoutes);
 
 app.listen(port, () => {
   console.log(`Server is listening on PORT: ${port}`);

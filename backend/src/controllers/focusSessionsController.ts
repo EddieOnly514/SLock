@@ -20,8 +20,8 @@ async function createFocusSession(req: Request, res: Response): Promise<Response
         }
 
         const insertData: Record<string, any> = {
-            user_id: userData.id, 
-            start_time: new Date().toISOString(),
+                                                                        user_id: userData.id, 
+                                                                        start_time: new Date().toISOString(), 
         }
 
         if (validationData.scheduled_duration !== undefined) {
@@ -30,7 +30,7 @@ async function createFocusSession(req: Request, res: Response): Promise<Response
 
         const { error: createSessionError, data: createdSession } = await supabaseAdmin.from('focus_sessions')
                                                                     .insert(insertData).select('id').single();
-
+        
         if (createSessionError || !createdSession) {
             throw createSessionError || Error('Error when creating focus session');
         }
