@@ -50,4 +50,44 @@ async function createCircle(req: Request, res: Response): Promise<Response> {
     }
 }
 
-export { createCircle };
+
+async function getCircles(req: Request, res: Response): Promise<Response> {
+    try {
+        const userData = req.user;
+
+        if (!userData) {
+            return res.status(500).json({ error: 'Could not find User' });
+        }
+
+        const { error: membershipError, data: memberships } = await supabaseAdmin
+            .from('circle_members')
+            .select('circle_id')
+            .eq('user_id', userData.id);
+
+        if (membershipError) {
+            throw membershipError;
+        }
+
+        if (!memberships || memberships.length === 0) {
+            return res.status(200).json({ circles: [] });
+        }
+
+        const circleIds = memberships.map((m) => m.circle_id);
+
+        const { error: circlesError, data: circles } = await supabaseAdmin
+            .from('circles')
+            .select('*')
+            .in('id', circleIds);
+
+        if (circlesError) {
+            throw circlesError;
+        }
+
+        return res.status(200).json({ circles: circles || [] });
+    } catch (error) {
+        console.error('GET CIRCLES ERROR: ', error);
+        return res.status(500).json({ error: GENERIC_SERVER_ERROR });
+    }
+}
+
+export { createCircle, getCircles };
