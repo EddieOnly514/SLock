@@ -90,4 +90,52 @@ async function getCircles(req: Request, res: Response): Promise<Response> {
     }
 }
 
-export { createCircle, getCircles };
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function getCircle(req: Request, res: Response): Promise<Response> {
+    try {
+        const userData = req.user;
+
+        if (!userData) {
+            return res.status(500).json({ error: 'Could not find User' });
+        }
+
+        const circleId = req.params.id;
+
+        if (!circleId || typeof circleId !== 'string' || !uuidRegex.test(circleId.trim())) {
+            return res.status(400).json({ error: 'Invalid circle ID' });
+        }
+
+        const { data: membership } = await supabaseAdmin
+            .from('circle_members')
+            .select('circle_id')
+            .eq('circle_id', circleId)
+            .eq('user_id', userData.id)
+            .maybeSingle();
+
+        if (!membership) {
+            return res.status(403).json({ error: 'You are not a member of this circle' });
+        }
+
+        const { error: circleError, data: circle } = await supabaseAdmin
+            .from('circles')
+            .select('*')
+            .eq('id', circleId)
+            .maybeSingle();
+
+        if (circleError) {
+            throw circleError;
+        }
+
+        if (!circle) {
+            return res.status(404).json({ error: 'Circle not found' });
+        }
+
+        return res.status(200).json({ circle });
+    } catch (error) {
+        console.error('GET CIRCLE ERROR: ', error);
+        return res.status(500).json({ error: GENERIC_SERVER_ERROR });
+    }
+}
+
+export { createCircle, getCircles, getCircle };
