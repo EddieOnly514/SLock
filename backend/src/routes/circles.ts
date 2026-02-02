@@ -7,6 +7,8 @@ import {
     updateCircle,
     deleteCircle,
     addCircleMember,
+    getCircleMembers,
+    removeCircleMember,
 } from '../controllers/circlesController';
 
 const router = express.Router();
@@ -17,5 +19,7 @@ router.get('/:id', requireAuth, getCircle);
 router.patch('/:id', requireAuth, updateCircle);
 router.delete('/:id', requireAuth, deleteCircle);
 router.post('/:id/members', requireAuth, addCircleMember);
+router.get('/:id/members', requireAuth, getCircleMembers);
+router.delete('/:id/members/:userId', requireAuth, removeCircleMember);
 
 export default router;

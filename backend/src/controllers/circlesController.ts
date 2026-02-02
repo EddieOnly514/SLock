@@ -333,4 +333,120 @@ async function addCircleMember(req: Request, res: Response): Promise<Response> {
     }
 }
 
-export { createCircle, getCircles, getCircle, updateCircle, deleteCircle, addCircleMember };
+async function getCircleMembers(req: Request, res: Response): Promise<Response> {
+    try {
+        const userData = req.user;
+
+        if (!userData) {
+            return res.status(500).json({ error: 'Could not find User' });
+        }
+
+        const circleId = req.params.id;
+
+        if (!circleId || typeof circleId !== 'string' || !uuidRegex.test(circleId.trim())) {
+            return res.status(400).json({ error: 'Invalid circle ID' });
+        }
+
+        const { data: membership } = await supabaseAdmin
+            .from('circle_members')
+            .select('circle_id')
+            .eq('circle_id', circleId)
+            .eq('user_id', userData.id)
+            .maybeSingle();
+
+        if (!membership) {
+            return res.status(403).json({ error: 'You are not a member of this circle' });
+        }
+
+        const { error: membersError, data: members } = await supabaseAdmin
+            .from('circle_members')
+            .select('user_id, joined_at, users!circle_members_user_id_fkey(id, username, avatar_url)')
+            .eq('circle_id', circleId);
+
+        if (membersError) {
+            throw membersError;
+        }
+
+        return res.status(200).json({ members: members || [] });
+    } catch (error) {
+        console.error('GET CIRCLE MEMBERS ERROR: ', error);
+        return res.status(500).json({ error: GENERIC_SERVER_ERROR });
+    }
+}
+
+async function removeCircleMember(req: Request, res: Response): Promise<Response> {
+    try {
+        const userData = req.user;
+
+        if (!userData) {
+            return res.status(500).json({ error: 'Could not find User' });
+        }
+
+        const circleId = req.params.id;
+        const memberUserId = req.params.userId;
+
+        if (!circleId || typeof circleId !== 'string' || !uuidRegex.test(circleId.trim())) {
+            return res.status(400).json({ error: 'Invalid circle ID' });
+        }
+
+        if (!memberUserId || typeof memberUserId !== 'string' || !uuidRegex.test(memberUserId.trim())) {
+            return res.status(400).json({ error: 'Invalid member user ID' });
+        }
+
+        const { data: circle } = await supabaseAdmin
+            .from('circles')
+            .select('id, created_by')
+            .eq('id', circleId)
+            .maybeSingle();
+
+        if (!circle) {
+            return res.status(404).json({ error: 'Circle not found' });
+        }
+
+        const { data: currentUserMembership } = await supabaseAdmin
+            .from('circle_members')
+            .select('user_id')
+            .eq('circle_id', circleId)
+            .eq('user_id', userData.id)
+            .maybeSingle();
+
+        if (!currentUserMembership) {
+            return res.status(403).json({ error: 'You are not a member of this circle' });
+        }
+
+        const isRemovingSelf = memberUserId === userData.id;
+        const isCreator = circle.created_by === userData.id;
+
+        if (!isRemovingSelf && !isCreator) {
+            return res.status(403).json({ error: 'Only the circle creator can remove other members' });
+        }
+
+        const { data: targetMembership } = await supabaseAdmin
+            .from('circle_members')
+            .select('user_id')
+            .eq('circle_id', circleId)
+            .eq('user_id', memberUserId)
+            .maybeSingle();
+
+        if (!targetMembership) {
+            return res.status(404).json({ error: 'User is not a member of this circle' });
+        }
+
+        const { error: deleteError } = await supabaseAdmin
+            .from('circle_members')
+            .delete()
+            .eq('circle_id', circleId)
+            .eq('user_id', memberUserId);
+
+        if (deleteError) {
+            throw deleteError;
+        }
+
+        return res.status(204).send();
+    } catch (error) {
+        console.error('REMOVE CIRCLE MEMBER ERROR: ', error);
+        return res.status(500).json({ error: GENERIC_SERVER_ERROR });
+    }
+}
+
+export { createCircle, getCircles, getCircle, updateCircle, deleteCircle, addCircleMember, getCircleMembers, removeCircleMember };
