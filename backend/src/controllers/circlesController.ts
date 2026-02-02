@@ -1,6 +1,10 @@
 import type { Request, Response } from 'express';
 import { supabaseAdmin } from '../config/supabase';
-import { validateCreateCirclePayload, validateUpdateCirclePayload } from '../utils/validate';
+import {
+    validateCreateCirclePayload,
+    validateUpdateCirclePayload,
+    validateAddCircleMemberPayload,
+} from '../utils/validate';
 
 const GENERIC_SERVER_ERROR = 'An unexpected server error has occurred. Please try again.';
 
@@ -252,4 +256,81 @@ async function deleteCircle(req: Request, res: Response): Promise<Response> {
     }
 }
 
-export { createCircle, getCircles, getCircle, updateCircle, deleteCircle };
+async function addCircleMember(req: Request, res: Response): Promise<Response> {
+    try {
+        const userData = req.user;
+
+        if (!userData) {
+            return res.status(500).json({ error: 'Could not find User' });
+        }
+
+        const circleId = req.params.id;
+
+        if (!circleId || typeof circleId !== 'string' || !uuidRegex.test(circleId.trim())) {
+            return res.status(400).json({ error: 'Invalid circle ID' });
+        }
+
+        const { error: validationError, data: validationData } = validateAddCircleMemberPayload(req.body);
+
+        if (validationError || !validationData) {
+            return res.status(400).json({
+                error: validationError?.message ?? 'Error when validating add member payload',
+            });
+        }
+
+        const { error: fetchError, data: circle } = await supabaseAdmin
+            .from('circles')
+            .select('id, created_by')
+            .eq('id', circleId)
+            .maybeSingle();
+
+        if (fetchError) {
+            throw fetchError;
+        }
+
+        if (!circle) {
+            return res.status(404).json({ error: 'Circle not found' });
+        }
+
+        if (circle.created_by !== userData.id) {
+            return res.status(403).json({ error: 'Only the circle creator can add members' });
+        }
+
+        const { data: targetUser } = await supabaseAdmin
+            .from('users')
+            .select('id')
+            .eq('id', validationData.user_id)
+            .maybeSingle();
+
+        if (!targetUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const { data: existingMember } = await supabaseAdmin
+            .from('circle_members')
+            .select('user_id')
+            .eq('circle_id', circleId)
+            .eq('user_id', validationData.user_id)
+            .maybeSingle();
+
+        if (existingMember) {
+            return res.status(409).json({ error: 'User is already a member of this circle' });
+        }
+
+        const { error: insertError } = await supabaseAdmin.from('circle_members').insert({
+            circle_id: circleId,
+            user_id: validationData.user_id,
+        });
+
+        if (insertError) {
+            throw insertError;
+        }
+
+        return res.status(201).json({ message: 'Member added successfully' });
+    } catch (error) {
+        console.error('ADD CIRCLE MEMBER ERROR: ', error);
+        return res.status(500).json({ error: GENERIC_SERVER_ERROR });
+    }
+}
+
+export { createCircle, getCircles, getCircle, updateCircle, deleteCircle, addCircleMember };
