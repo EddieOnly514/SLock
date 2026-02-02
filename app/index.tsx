@@ -15,9 +15,9 @@ export default function Index() {
   // const { user, isLoading, isOnboarded } = useAuth();
 
   useEffect(() => {
-    // Route to onboarding flow
+    // Route to auth welcome screen
     setTimeout(() => {
-      router.replace('/onboarding/quiz-intro');
+      router.replace('/auth/welcome');
     }, 500);
   }, []);
 
