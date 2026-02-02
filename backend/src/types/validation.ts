@@ -90,6 +90,18 @@ interface GenerateDailySummaries {
   date?: string;
 }
 
+interface CreateCircleData {
+  name: string;
+}
+
+interface UpdateCircleData {
+  name?: string;
+}
+
+interface AddCircleMemberData {
+  user_id: string;
+}
+
 export type { 
   ValidationResult, 
   RegisterData, 
@@ -106,4 +118,7 @@ export type {
   FriendRequestData,
   UpdateFriendData,
   ActivityData,
-  GenerateDailySummaries };
+  GenerateDailySummaries,
+  CreateCircleData,
+  UpdateCircleData,
+  AddCircleMemberData };

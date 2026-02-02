@@ -14,7 +14,10 @@ import type {
   FriendRequestData,
   UpdateFriendData,
   ActivityData,
-  GenerateDailySummaries } from "../types/validation";
+  GenerateDailySummaries,
+  CreateCircleData,
+  UpdateCircleData,
+  AddCircleMemberData } from "../types/validation";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -136,13 +139,13 @@ function validateUpdatePayload(payload: Record<string, string>): ValidationResul
   const updateData: UpdateData = {};
 
   if (trimmedUsername) {
-    if (/\s/.test(trimmedUsername)) {
-      return { error: { message: "Username must not contain spaces" }, data: null };
-    }
-  
-    if (trimmedUsername.length > 16) {
-      return { error: { message: "Username must be less than 16 characters" }, data: null };
-    }
+  if (/\s/.test(trimmedUsername)) {
+    return { error: { message: "Username must not contain spaces" }, data: null };
+  }
+
+  if (trimmedUsername.length > 16) {
+    return { error: { message: "Username must be less than 16 characters" }, data: null };
+  }
 
     if (trimmedUsername.length < 3) {
       return { error: { message: "Username must contain at least 3 characters" }, data: null };
@@ -241,7 +244,7 @@ function validateUpdateAppPayload(payload: Record<string, string | boolean>): Va
         UpdateAppPayload.is_tracked = true;
       } else {
         return { error: { message: 'Invalid value for is_tracked' }, data: null};
-      }
+  }
     } else {
       return { error: { message: 'Invalid type for is_tracked' }, data: null };
     }
@@ -687,6 +690,78 @@ function validateGenerateDailySummaryPayload(payload: Record<string, any>): Vali
   return { data: { date }, error: null };
 }
 
+function validateCreateCirclePayload(payload: Record<string, any>): ValidationResult<CreateCircleData> {
+  const raw_name = payload.name;
+
+  if (raw_name === undefined) {
+    return { error: { message: 'name must be provided' }, data: null };
+  }
+
+  if (typeof raw_name !== 'string') {
+    return { error: { message: 'name must be a string' }, data: null };
+  }
+
+  const name = raw_name.trim();
+
+  if (!name) {
+    return { error: { message: 'name must not be empty' }, data: null };
+  }
+
+  if (name.length > 50) {
+    return { error: { message: 'name must be 50 characters or less' }, data: null };
+  }
+
+  return { data: { name }, error: null };
+}
+
+function validateUpdateCirclePayload(payload: Record<string, any>): ValidationResult<UpdateCircleData> {
+  const raw_name = payload.name;
+
+  if (raw_name === undefined) {
+    return { error: { message: 'At least one field must be provided for update' }, data: null };
+  }
+
+  if (typeof raw_name !== 'string') {
+    return { error: { message: 'name must be a string' }, data: null };
+  }
+
+  const name = raw_name.trim();
+
+  if (!name) {
+    return { error: { message: 'name must not be empty' }, data: null };
+  }
+
+  if (name.length > 50) {
+    return { error: { message: 'name must be 50 characters or less' }, data: null };
+  }
+
+  return { data: { name }, error: null };
+}
+
+function validateAddCircleMemberPayload(payload: Record<string, any>): ValidationResult<AddCircleMemberData> {
+  const raw_user_id = payload.user_id;
+
+  if (raw_user_id === undefined) {
+    return { error: { message: 'user_id must be provided' }, data: null };
+  }
+
+  if (typeof raw_user_id !== 'string') {
+    return { error: { message: 'user_id must be a string' }, data: null };
+  }
+
+  const user_id = raw_user_id.trim();
+
+  if (!user_id) {
+    return { error: { message: 'user_id must not be empty' }, data: null };
+  }
+
+  if (!uuidRegex.test(user_id)) {
+    return { error: { message: 'user_id must be a valid UUID' }, data: null };
+  }
+
+  return { data: { user_id }, error: null };
+}
+
 export { validateRegisterPayload, 
   validateLoginPayload, 
   validateRefreshPayload, 
@@ -701,4 +776,7 @@ export { validateRegisterPayload,
   validateFriendRequestPayload,
   validateUpdateFriendPayload,
   validateCreateActivityPayload,
-  validateGenerateDailySummaryPayload };
+  validateGenerateDailySummaryPayload,
+  validateCreateCirclePayload,
+  validateUpdateCirclePayload,
+  validateAddCircleMemberPayload };
